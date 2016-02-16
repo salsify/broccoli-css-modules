@@ -1,0 +1,8 @@
+tmp/
+test.js
+
+.travis.yml
+.gitignore
+.jshintrc
+
+npm-debug.log
