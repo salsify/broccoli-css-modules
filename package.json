@@ -1,0 +1,32 @@
+{
+  "name": "broccoli-css-modules",
+  "version": "0.1.0",
+  "description": "A broccoli plugin for compiling CSS modules",
+  "main": "index.js",
+  "scripts": {
+    "test": "jshint *.js && mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/salsify/broccoli-css-modules.git"
+  },
+  "author": "Dan Freeman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/salsify/broccoli-css-modules/issues"
+  },
+  "homepage": "https://github.com/salsify/broccoli-css-modules#readme",
+  "dependencies": {
+    "broccoli-caching-writer": "^2.2.1",
+    "css-modules-loader-core": "^1.0.0",
+    "mkdirp": "^0.5.1",
+    "rsvp": "^3.2.1"
+  },
+  "devDependencies": {
+    "broccoli-fixture": "^0.1.0",
+    "chai": "^3.5.0",
+    "chai-as-promised": "^5.2.0",
+    "jshint": "^2.9.1",
+    "mocha": "^2.4.5"
+  }
+}
