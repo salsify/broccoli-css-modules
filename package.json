@@ -6,6 +6,10 @@
   "scripts": {
     "test": "jshint *.js && mocha"
   },
+  "keywords": [
+    "broccoli-plugin",
+    "css-modules"
+  ],
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/salsify/broccoli-css-modules.git"
