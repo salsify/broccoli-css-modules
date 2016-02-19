@@ -21,7 +21,9 @@ All configuration parameters listed below are optional.
 The assumed character encoding for all files being processed. Defaults to `utf-8`.
 
 ##### `plugins`
-An array of [PostCSS](https://github.com/postcss/postcss) plugins that will also be applied during transformation.
+Additional [PostCSS](https://github.com/postcss/postcss) plugins that will be applied to the input styles. May be either
+an array or a hash with `before` and/or `after` keys, each containing an array of plugins.
+Specifying only a plain array is shorthand for including those plugins in `after`.
 
 ##### `generateScopedName`
 A callback to generate the scoped version of an identifier. Receives two arguments:

@@ -92,7 +92,7 @@ describe('broccoli-css-modules', function() {
     });
   });
 
-  it('applies additional PostCSS plugins', function() {
+  it('applies an array of additional PostCSS plugins after the modules transform', function() {
     var input = new Node({
       'entry.css': '.class { color: green; }'
     });
@@ -103,6 +103,7 @@ describe('broccoli-css-modules', function() {
           css.walkRules(function(rule) {
             rule.walkDecls(function(decl) {
               if (decl.prop === 'color') {
+                assert.equal(decl.parent.selector, '._entry__class');
                 decl.value = 'blue';
               }
             });
@@ -116,6 +117,56 @@ describe('broccoli-css-modules', function() {
     return assert.eventually.deepEqual(compiled, {
       'entry.css': cssOutput('entry.css', [
         '._entry__class { color: blue; }'
+      ]),
+      'entry.js': jsOutput({
+        class: '_entry__class'
+      })
+    });
+  });
+
+  it('applies explicit before and after PostCSS plugin sets around the modules transform', function() {
+    var input = new Node({
+      'entry.css': '.class { color: green; }'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      plugins: {
+        before: [
+          function(css) {
+            css.walkRules(function(rule) {
+              rule.walkDecls(function(decl) {
+                if (decl.prop === 'color') {
+                  assert.equal(decl.value, 'green');
+                  assert.equal(decl.parent.selector, '.class');
+                  decl.value = 'blue';
+                }
+              });
+            });
+
+            return css;
+          }
+        ],
+        after: [
+          function(css) {
+            css.walkRules(function(rule) {
+              rule.walkDecls(function(decl) {
+                if (decl.prop === 'color') {
+                  assert.equal(decl.value, 'blue');
+                  assert.equal(decl.parent.selector, '._entry__class');
+                  decl.value = 'red';
+                }
+              });
+            });
+
+            return css;
+          }
+        ]
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.css': cssOutput('entry.css', [
+        '._entry__class { color: red; }'
       ]),
       'entry.js': jsOutput({
         class: '_entry__class'

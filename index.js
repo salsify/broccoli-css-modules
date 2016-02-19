@@ -17,7 +17,7 @@ function CSSModules(inputNode, _options) {
 
   var options = _options || {};
 
-  this.plugins = options.plugins || [];
+  this.plugins = unwrapPlugins(options.plugins || []);
   this.encoding = options.encoding || 'utf-8';
   this.generateScopedName = options.generateScopedName || LoaderCore.scope.generateScopedName;
   this.resolvePath = options.resolvePath || resolvePath;
@@ -82,21 +82,39 @@ CSSModules.prototype.generateRelativeScopedName = function(className, absolutePa
 
 CSSModules.prototype.loader = function() {
   if (!this._loader) {
-    this._loader = new LoaderCore([
-      LoaderCore.values,
-      LoaderCore.localByDefault,
-      LoaderCore.extractImports,
-      LoaderCore.scope({
-        generateScopedName: this.generateRelativeScopedName.bind(this)
-      })
-    ].concat(this.plugins));
+    this._loader = new LoaderCore([].concat(this.plugins.before, this.loaderPlugins(), this.plugins.after));
   }
 
   return this._loader;
 };
 
+CSSModules.prototype.loaderPlugins = function() {
+  return [
+    LoaderCore.values,
+    LoaderCore.localByDefault,
+    LoaderCore.extractImports,
+    LoaderCore.scope({
+      generateScopedName: this.generateRelativeScopedName.bind(this)
+    })
+  ];
+};
+
 function resolvePath(relativePath, fromFile) {
   return path.resolve(path.dirname(fromFile), relativePath);
+}
+
+function unwrapPlugins(plugins) {
+  if (Array.isArray(plugins)) {
+    return {
+      before: [],
+      after: plugins
+    };
+  } else {
+    return {
+      before: plugins.before || [],
+      after: plugins.after || []
+    };
+  }
 }
 
 // A cheap (but fast) substitute for actual source maps
