@@ -3,6 +3,7 @@
 
 require('chai-as-promised');
 
+var path = require('path');
 var chai = require('chai');
 var fixture = require('broccoli-fixture');
 var CSSModules = require('./index');
@@ -170,6 +171,55 @@ describe('broccoli-css-modules', function() {
       ]),
       'entry.js': jsOutput({
         class: '_entry__class'
+      })
+    });
+  });
+
+  it('exposes a load function for passing to plugins', function() {
+    var input = new Node({
+      'entry.css': '.class { color: green; }',
+      'other.css': '.other { color: orange; }'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      plugins: function(load) {
+        return [
+          function(css, processor) {
+            var file = processor.opts.from;
+            if (file.lastIndexOf('entry.css') !== file.length - 9) { return css; }
+
+            css.walkRules(function(rule) {
+              rule.walkDecls(function(decl) {
+                if (decl.prop === 'color') {
+                  assert.equal(decl.value, 'green');
+                  decl.value = 'blue';
+                }
+              });
+            });
+
+            var otherPath = path.resolve(path.dirname(file), './other.css');
+            return load(otherPath).then(function(otherModule) {
+              assert.equal(otherModule.injectableSource, '._other__other { color: orange; }');
+              assert.deepEqual(otherModule.exportTokens, { other: '_other__other' });
+              return css;
+            });
+          }
+        ];
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.css': cssOutput('entry.css', [
+        '._entry__class { color: blue; }'
+      ]),
+      'entry.js': jsOutput({
+        class: '_entry__class'
+      }),
+      'other.css': cssOutput('other.css', [
+        '._other__other { color: orange; }'
+      ]),
+      'other.js': jsOutput({
+        other: '_other__other'
       })
     });
   });

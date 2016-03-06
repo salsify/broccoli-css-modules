@@ -17,7 +17,7 @@ function CSSModules(inputNode, _options) {
 
   var options = _options || {};
 
-  this.plugins = unwrapPlugins(options.plugins || []);
+  this.plugins = unwrapPlugins(options.plugins || [], this);
   this.encoding = options.encoding || 'utf-8';
   this.generateScopedName = options.generateScopedName || LoaderCore.scope.generateScopedName;
   this.resolvePath = options.resolvePath || resolvePath;
@@ -103,7 +103,9 @@ function resolvePath(relativePath, fromFile) {
   return path.resolve(path.dirname(fromFile), relativePath);
 }
 
-function unwrapPlugins(plugins) {
+function unwrapPlugins(_plugins, owner) {
+  var plugins = typeof _plugins === 'function' ? _plugins(owner.loadPath.bind(owner)) : _plugins;
+
   if (Array.isArray(plugins)) {
     return {
       before: [],
@@ -120,4 +122,12 @@ function unwrapPlugins(plugins) {
 // A cheap (but fast) substitute for actual source maps
 function cssWithModuleTag(modulePath, css) {
   return '/* styles for ' + modulePath + ' */\n' + css;
+}
+
+function makeLoadCallback(owner) {
+  return function load(path) {
+    return owner.loadPath(path).then(function(result) {
+      return result.injectableSource;
+    });
+  };
 }
