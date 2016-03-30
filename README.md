@@ -25,11 +25,6 @@ Additional [PostCSS](https://github.com/postcss/postcss) plugins that will be ap
 an array or a hash with `before` and/or `after` keys, each containing an array of plugins.
 Specifying only a plain array is shorthand for including those plugins in `after`.
 
-Alternatively, `plugins` may be a function returning either an array or hash as specified above. When invoked, this
-function will receive a `load` callback as its first argument, which will take an absolute path to a CSS file and
-return a promise for a hash with [`injectableSource` and `exportTokens` keys](https://github.com/css-modules/css-modules-loader-core#coreload-sourcestring--sourcepath--pathfetcher--promise-injectablesource-exporttokens-).
-This may be useful when working with PostCSS plugins that themselves want to load other files.
-
 ##### `generateScopedName`
 A callback to generate the scoped version of an identifier. Receives two arguments:
  - `name`: the identifier to be scoped
@@ -41,3 +36,7 @@ A callback to resolve a given import path from one file to another. Receives two
  - `importPath`: the path from which to import, as specified in the importing module
  - `fromFile`: the absolute path of the importing module
 The function should return an absolute path where the contents of the target imported module can be located.
+
+##### `onProcessFile`
+A callback that will be invoked whenever a file is about to be processed. Receives one argument:
+ - `path`: the path of the file about to be processed

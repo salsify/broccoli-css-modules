@@ -21,6 +21,7 @@ function CSSModules(inputNode, _options) {
   this.encoding = options.encoding || 'utf-8';
   this.generateScopedName = options.generateScopedName || LoaderCore.scope.generateScopedName;
   this.resolvePath = options.resolvePath || resolvePath;
+  this.onProcessFile = options.onProcessFile;
 
   this._seen = null;
   this._loader = null;
@@ -40,6 +41,10 @@ CSSModules.prototype.build = function() {
 CSSModules.prototype.process = function(sourcePath) {
   var relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
   var destinationPath = path.join(this.outputPath, relativeSource);
+
+  if (this.onProcessFile) {
+    this.onProcessFile(sourcePath);
+  }
 
   return this.loadPath(sourcePath).then(function(result) {
     var dirname = path.dirname(destinationPath);
@@ -103,9 +108,7 @@ function resolvePath(relativePath, fromFile) {
   return path.resolve(path.dirname(fromFile), relativePath);
 }
 
-function unwrapPlugins(_plugins, owner) {
-  var plugins = typeof _plugins === 'function' ? _plugins(owner.loadPath.bind(owner)) : _plugins;
-
+function unwrapPlugins(plugins, owner) {
   if (Array.isArray(plugins)) {
     return {
       before: [],
