@@ -40,3 +40,15 @@ The function should return an absolute path where the contents of the target imp
 ##### `onProcessFile`
 A callback that will be invoked whenever a file is about to be processed. Receives one argument:
  - `path`: the path of the file about to be processed
+
+##### `formatCSS`
+A function that will be invoked to determine the output format of the namespaced CSS for a module. Receives two arguments:
+ - `namespacedCSS`: a string representing the processed CSS for a given module
+ - `modulePath`: the relative path of the module to be formatted
+The function should return a string representing the content to be written out. By default, the given CSS will be emitted with a leading content indicating the path of the original module.
+
+##### `formatJS`
+A function that will be invoked to determine the output format of class name mapping for a module. Receives two arguments:
+ - `classMapping`: a hash mapping each original classname from the module to its namespaced equivalent(s)
+ - `modulePath`: the relative path of the module to be formatted
+The function should return a string representing the content to be written out. By default, the given object will be emitted as the default export of an ES6 module.

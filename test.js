@@ -53,6 +53,31 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+  it('accepts custom output formatters for JS and CSS', function() {
+    var input = new Node({
+      'foo.css': '.abc {}'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      formatJS: function(classMappings, modulePath) {
+        assert.equal(modulePath, 'foo.css');
+        assert.deepEqual(classMappings, { abc: '_foo__abc' });
+        return 'js content';
+      },
+
+      formatCSS: function(namespacedCSS, modulePath) {
+        assert.equal(modulePath, 'foo.css');
+        assert.equal(namespacedCSS, '._foo__abc {}');
+        return 'css content';
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'foo.css': 'css content',
+      'foo.js': 'js content'
+    });
+  });
+
   it('allows for customizing scoped name generation', function() {
     var input = new Node({
       directory: {

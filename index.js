@@ -22,6 +22,8 @@ function CSSModules(inputNode, _options) {
   this.generateScopedName = options.generateScopedName || LoaderCore.scope.generateScopedName;
   this.resolvePath = options.resolvePath || resolvePath;
   this.onProcessFile = options.onProcessFile;
+  this.formatJS = options.formatJS;
+  this.formatCSS = options.formatCSS;
 
   this._seen = null;
   this._loader = null;
@@ -49,13 +51,29 @@ CSSModules.prototype.process = function(sourcePath) {
   return this.loadPath(sourcePath).then(function(result) {
     var dirname = path.dirname(destinationPath);
     var filename = path.basename(destinationPath, '.css');
-    var css = cssWithModuleTag(relativeSource, result.injectableSource);
-    var js = 'export default ' + JSON.stringify(result.exportTokens, null, 2) + ';';
+    var css = this.formatInjectableSource(result.injectableSource, relativeSource);
+    var js = this.formatExportTokens(result.exportTokens, relativeSource);
 
     mkdirp.sync(dirname);
     fs.writeFileSync(destinationPath, css, this.encoding);
     fs.writeFileSync(path.join(dirname, filename + '.js'), js, this.encoding);
   }.bind(this));
+};
+
+CSSModules.prototype.formatExportTokens = function(exportTokens, modulePath) {
+  if (this.formatJS) {
+    return this.formatJS(exportTokens, modulePath);
+  } else {
+    return 'export default ' + JSON.stringify(exportTokens, null, 2) + ';';
+  }
+};
+
+CSSModules.prototype.formatInjectableSource = function(injectableSource, modulePath) {
+  if (this.formatCSS) {
+    return this.formatCSS(injectableSource, modulePath);
+  } else {
+    return '/* styles for ' + modulePath + ' */\n' + injectableSource;
+  }
 };
 
 // Hook for css-module-loader-core to fetch the exported tokens for a given import
@@ -120,11 +138,6 @@ function unwrapPlugins(plugins, owner) {
       after: plugins.after || []
     };
   }
-}
-
-// A cheap (but fast) substitute for actual source maps
-function cssWithModuleTag(modulePath, css) {
-  return '/* styles for ' + modulePath + ' */\n' + css;
 }
 
 function makeLoadCallback(owner) {
