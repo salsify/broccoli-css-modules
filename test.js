@@ -170,7 +170,8 @@ describe('broccoli-css-modules', function() {
 
   it('applies explicit before and after PostCSS plugin sets around the modules transform', function() {
     var input = new Node({
-      'entry.css': '.class { color: green; }'
+      'constants.css': '@value superbold: 800;',
+      'entry.css': '@value superbold from "constants.css";\n.class { color: green; font-weight: superbold; }'
     });
 
     var compiled = fixture.build(new CSSModules(input, {
@@ -183,6 +184,9 @@ describe('broccoli-css-modules', function() {
                   assert.equal(decl.value, 'green');
                   assert.equal(decl.parent.selector, '.class');
                   decl.value = 'blue';
+                } else if (decl.prop === 'font-weight') {
+                  assert.equal(decl.value, 'superbold');
+                  assert.equal(decl.parent.selector, '.class');
                 }
               });
             });
@@ -198,6 +202,9 @@ describe('broccoli-css-modules', function() {
                   assert.equal(decl.value, 'blue');
                   assert.equal(decl.parent.selector, '._entry__class');
                   decl.value = 'red';
+                } else if (decl.prop === 'font-weight') {
+                  assert.equal(decl.value, '800');
+                  assert.equal(decl.parent.selector, '._entry__class');
                 }
               });
             });
@@ -209,10 +216,15 @@ describe('broccoli-css-modules', function() {
     }));
 
     return assert.eventually.deepEqual(compiled, {
+      'constants.css': cssOutput('constants.css', []),
+      'constants.js': jsOutput({
+        superbold: '800'
+      }),
       'entry.css': cssOutput('entry.css', [
-        '._entry__class { color: red; }'
+        '._entry__class { color: red; font-weight: 800; }'
       ]),
       'entry.js': jsOutput({
+        superbold: '800',
         class: '_entry__class'
       })
     });

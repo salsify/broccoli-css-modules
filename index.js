@@ -4,7 +4,9 @@ var fs = require('fs');
 var path = require('path');
 
 var mkdirp = require('mkdirp');
+var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
+var ModulesParser = require('css-modules-loader-core/lib/parser');
 var Promise = require('rsvp').Promise;
 var Writer = require('broccoli-caching-writer');
 
@@ -26,7 +28,6 @@ function CSSModules(inputNode, _options) {
   this.formatCSS = options.formatCSS;
 
   this._seen = null;
-  this._loader = null;
 }
 
 CSSModules.prototype = Object.create(Writer.prototype);
@@ -93,7 +94,7 @@ CSSModules.prototype.loadPath = function(absolutePath) {
   }
 
   var content = fs.readFileSync(absolutePath, this.encoding);
-  return this.loader().load(content, absolutePath, null, this.fetchExports.bind(this)).then(function(result) {
+  return this.load(content, absolutePath, this.fetchExports.bind(this)).then(function(result) {
     return (seen[absolutePath] = result);
   });
 };
@@ -103,12 +104,17 @@ CSSModules.prototype.generateRelativeScopedName = function(className, absolutePa
   return this.generateScopedName(className, relativePath, fullRule);
 };
 
-CSSModules.prototype.loader = function() {
-  if (!this._loader) {
-    this._loader = new LoaderCore([].concat(this.plugins.before, this.loaderPlugins(), this.plugins.after));
-  }
+CSSModules.prototype.load = function(content, contentPath, pathFetcher) {
+  var parser = new ModulesParser(pathFetcher);
+  var processor = postcss([]
+      .concat(this.plugins.before)
+      .concat(this.loaderPlugins())
+      .concat([parser.plugin])
+      .concat(this.plugins.after));
 
-  return this._loader;
+  return processor.process(content, { from: '/' + contentPath }).then(function(result) {
+    return { injectableSource: result.css, exportTokens: parser.exportTokens };
+  });
 };
 
 CSSModules.prototype.loaderPlugins = function() {

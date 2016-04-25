@@ -24,6 +24,7 @@
     "broccoli-caching-writer": "^2.2.1",
     "css-modules-loader-core": "^1.0.0",
     "mkdirp": "^0.5.1",
+    "postcss": "^5.0.19",
     "rsvp": "^3.2.1"
   },
   "devDependencies": {
