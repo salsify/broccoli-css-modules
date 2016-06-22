@@ -1,6 +1,6 @@
 {
   "name": "broccoli-css-modules",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "A broccoli plugin for compiling CSS modules",
   "main": "index.js",
   "scripts": {
