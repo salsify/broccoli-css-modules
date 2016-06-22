@@ -136,6 +136,30 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+  it('passes custom PostCSS options', function() {
+    this.slow(150);
+
+    var input = new Node({
+      'entry.scss': '.outer { .class { color: blue; } }'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      postcssOptions: {
+        syntax: require('postcss-scss')
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.scss': cssOutput('entry.scss', [
+        '._entry__outer { ._entry__class { color: blue; } }'
+      ]),
+      'entry.js': jsOutput({
+        outer: '_entry__outer',
+        class: '_entry__class'
+      })
+    });
+  });
+
   it('applies an array of additional PostCSS plugins after the modules transform', function() {
     var input = new Node({
       'entry.css': '.class { color: green; }'

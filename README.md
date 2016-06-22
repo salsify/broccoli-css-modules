@@ -52,3 +52,6 @@ A function that will be invoked to determine the output format of class name map
  - `classMapping`: a hash mapping each original classname from the module to its namespaced equivalent(s)
  - `modulePath`: the relative path of the module to be formatted
 The function should return a string representing the content to be written out. By default, the given object will be emitted as the default export of an ES6 module.
+
+##### `postcssOptions`
+A hash of options that will be passed directly through to the PostCSS processor. This allows the use of e.g. custom syntax in the processed files.

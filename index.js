@@ -4,6 +4,7 @@ var fs = require('fs');
 var path = require('path');
 
 var mkdirp = require('mkdirp');
+var assign = require('object-assign');
 var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
 var ModulesParser = require('css-modules-loader-core/lib/parser');
@@ -26,6 +27,7 @@ function CSSModules(inputNode, _options) {
   this.onProcessFile = options.onProcessFile;
   this.formatJS = options.formatJS;
   this.formatCSS = options.formatCSS;
+  this.postcssOptions = options.postcssOptions || {};
 
   this._seen = null;
 }
@@ -51,7 +53,7 @@ CSSModules.prototype.process = function(sourcePath) {
 
   return this.loadPath(sourcePath).then(function(result) {
     var dirname = path.dirname(destinationPath);
-    var filename = path.basename(destinationPath, '.css');
+    var filename = path.basename(destinationPath).replace(/\.[^.]+$/, '');
     var css = this.formatInjectableSource(result.injectableSource, relativeSource);
     var js = this.formatExportTokens(result.exportTokens, relativeSource);
 
@@ -106,15 +108,20 @@ CSSModules.prototype.generateRelativeScopedName = function(className, absolutePa
 
 CSSModules.prototype.load = function(content, contentPath, pathFetcher) {
   var parser = new ModulesParser(pathFetcher);
+  var options = this.processorOptions({ from: '/' + contentPath });
   var processor = postcss([]
       .concat(this.plugins.before)
       .concat(this.loaderPlugins())
       .concat([parser.plugin])
       .concat(this.plugins.after));
 
-  return processor.process(content, { from: '/' + contentPath }).then(function(result) {
+  return processor.process(content, options).then(function(result) {
     return { injectableSource: result.css, exportTokens: parser.exportTokens };
   });
+};
+
+CSSModules.prototype.processorOptions = function(additional) {
+  return assign({}, additional, this.postcssOptions);
 };
 
 CSSModules.prototype.loaderPlugins = function() {
