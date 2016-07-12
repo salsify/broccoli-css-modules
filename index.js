@@ -8,6 +8,7 @@ var assign = require('object-assign');
 var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
 var ModulesParser = require('css-modules-loader-core/lib/parser');
+var LocalByDefault = require('postcss-modules-local-by-default');
 var Promise = require('rsvp').Promise;
 var Writer = require('broccoli-caching-writer');
 
@@ -127,7 +128,8 @@ CSSModules.prototype.processorOptions = function(additional) {
 CSSModules.prototype.loaderPlugins = function() {
   return [
     LoaderCore.values,
-    LoaderCore.localByDefault,
+    // LoaderCore is locked to exactly version 1.0.0 of LocalByDefault, so we require it explicitly
+    LocalByDefault,
     LoaderCore.extractImports,
     LoaderCore.scope({
       generateScopedName: this.generateRelativeScopedName.bind(this)
