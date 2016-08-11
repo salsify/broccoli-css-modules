@@ -90,29 +90,30 @@ CSSModules.prototype.fetchExports = function(importString, fromFile) {
   });
 };
 
-CSSModules.prototype.loadPath = function(absolutePath) {
+CSSModules.prototype.loadPath = function(dependency) {
   var seen = this._seen;
+  var absolutePath = dependency.toString();
   if (seen[absolutePath]) {
     return Promise.resolve(seen[absolutePath]);
   }
 
   var content = fs.readFileSync(absolutePath, this.encoding);
-  return this.load(content, absolutePath, this.fetchExports.bind(this)).then(function(result) {
+  return this.load(content, dependency, this.fetchExports.bind(this)).then(function(result) {
     return (seen[absolutePath] = result);
   });
 };
 
-CSSModules.prototype.generateRelativeScopedName = function(className, absolutePath, fullRule) {
+CSSModules.prototype.generateRelativeScopedName = function(dependency, className, absolutePath, fullRule) {
   var relativePath = absolutePath.replace(this.inputPaths[0] + '/', '');
-  return this.generateScopedName(className, relativePath, fullRule);
+  return this.generateScopedName(className, relativePath, fullRule, dependency);
 };
 
-CSSModules.prototype.load = function(content, contentPath, pathFetcher) {
+CSSModules.prototype.load = function(content, dependency, pathFetcher) {
   var parser = new ModulesParser(pathFetcher);
-  var options = this.processorOptions({ from: '/' + contentPath });
+  var options = this.processorOptions({ from: '/' + dependency });
   var processor = postcss([]
       .concat(this.plugins.before)
-      .concat(this.loaderPlugins())
+      .concat(this.loaderPlugins(dependency))
       .concat([parser.plugin])
       .concat(this.plugins.after));
 
@@ -125,14 +126,14 @@ CSSModules.prototype.processorOptions = function(additional) {
   return assign({}, additional, this.postcssOptions);
 };
 
-CSSModules.prototype.loaderPlugins = function() {
+CSSModules.prototype.loaderPlugins = function(dependency) {
   return [
     LoaderCore.values,
     // LoaderCore is locked to exactly version 1.0.0 of LocalByDefault, so we require it explicitly
     LocalByDefault,
     LoaderCore.extractImports,
     LoaderCore.scope({
-      generateScopedName: this.generateRelativeScopedName.bind(this)
+      generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
     })
   ];
 };

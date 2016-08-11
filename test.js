@@ -136,6 +136,48 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+  it('passes exact values returned from import resolution to scoped name generation', function() {
+    var special = { toString: function() { return this.prefix + '/bar.css'; } };
+    var input = new Node({
+      'foo.css': '.foo { composes: bar from "bar"; }',
+      'bar.css': '.bar { }'
+    });
+
+    var generateCount = 0;
+    var expectedDepValues = ['bar.css', 'foo.css', special];
+    var compiled = fixture.build(new CSSModules(input, {
+      resolvePath: function(relativePath, fromFile) {
+        special.prefix = this.inputPaths[0];
+        return special;
+      },
+
+      generateScopedName: function(className, path, rule, dependency) {
+        var expectedDep = expectedDepValues[generateCount++];
+        if (typeof expectedDep === 'string') {
+          expectedDep = this.inputPaths[0] + '/' + expectedDep;
+        }
+
+        assert.equal(dependency, expectedDep);
+        return '_' + path.replace('.css', '') + '__' + className;
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'foo.css': cssOutput('foo.css', [
+        '._foo__foo { }'
+      ]),
+      'bar.css': cssOutput('bar.css', [
+        '._bar__bar { }'
+      ]),
+      'foo.js': jsOutput({
+        foo: '_foo__foo _bar__bar'
+      }),
+      'bar.js': jsOutput({
+        bar: '_bar__bar'
+      })
+    });
+  });
+
   it('passes custom PostCSS options', function() {
     this.slow(150);
 
