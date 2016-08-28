@@ -3,14 +3,19 @@
 var fs = require('fs');
 var path = require('path');
 
+var Promise = require('rsvp').Promise;
+var Writer = require('broccoli-caching-writer');
 var mkdirp = require('mkdirp');
 var assign = require('object-assign');
+
 var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
 var ModulesParser = require('css-modules-loader-core/lib/parser');
-var LocalByDefault = require('postcss-modules-local-by-default');
-var Promise = require('rsvp').Promise;
-var Writer = require('broccoli-caching-writer');
+
+var values = require('postcss-modules-values');
+var localByDefault = require('postcss-modules-local-by-default');
+var extractImports = require('postcss-modules-extract-imports');
+var scope = require('postcss-modules-scope');
 
 module.exports = CSSModules;
 
@@ -128,11 +133,10 @@ CSSModules.prototype.processorOptions = function(additional) {
 
 CSSModules.prototype.loaderPlugins = function(dependency) {
   return [
-    LoaderCore.values,
-    // LoaderCore is locked to exactly version 1.0.0 of LocalByDefault, so we require it explicitly
-    LocalByDefault,
-    LoaderCore.extractImports,
-    LoaderCore.scope({
+    values,
+    localByDefault,
+    extractImports,
+    scope({
       generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
     })
   ];

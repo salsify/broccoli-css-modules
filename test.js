@@ -329,8 +329,8 @@ describe('broccoli-css-modules', function() {
 
   it('exposes custom values in both JS and CSS', function() {
     var input = new Node({
-      'constants.css': '@value foo: green',
-      'styles.css': '@value foo from "./constants.css";\n.class { color: foo; }'
+      'constants.css': '@value foo: "Helvetica Neue", Geneva, Arial, sans-serif;',
+      'styles.css': '@value foo from "./constants.css";\n.class { font-family: foo; }'
     });
 
     var compiled = fixture.build(new CSSModules(input));
@@ -338,13 +338,13 @@ describe('broccoli-css-modules', function() {
     return assert.eventually.deepEqual(compiled, {
       'constants.css': cssOutput('constants.css', []),
       'constants.js': jsOutput({
-        foo: 'green'
+        foo: '"Helvetica Neue", Geneva, Arial, sans-serif'
       }),
       'styles.css': cssOutput('styles.css', [
-        '._styles__class { color: green; }'
+        '._styles__class { font-family: "Helvetica Neue", Geneva, Arial, sans-serif; }'
       ]),
       'styles.js': jsOutput({
-        foo: 'green',
+        foo: '"Helvetica Neue", Geneva, Arial, sans-serif',
         class: '_styles__class'
       })
     });

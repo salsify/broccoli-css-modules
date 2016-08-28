@@ -26,7 +26,10 @@
     "mkdirp": "^0.5.1",
     "object-assign": "^4.1.0",
     "postcss": "^5.0.19",
+    "postcss-modules-extract-imports": "^1.0.1",
     "postcss-modules-local-by-default": "^1.1.0",
+    "postcss-modules-scope": "^1.0.2",
+    "postcss-modules-values": "^1.2.2",
     "rsvp": "^3.2.1"
   },
   "devDependencies": {
