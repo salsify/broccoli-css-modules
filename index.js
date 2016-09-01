@@ -57,6 +57,7 @@ CSSModules.prototype.process = function(sourcePath) {
 
   // If the file isn't an extension we care about, just copy it over untouched
   if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
+    mkdirp.sync(path.dirname(destinationPath));
     symlinkOrCopy.sync(sourcePath, destinationPath);
     return;
   }

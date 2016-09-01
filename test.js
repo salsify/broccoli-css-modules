@@ -224,7 +224,11 @@ describe('broccoli-css-modules', function() {
   it('ignores irrelevant files', function() {
     var input = new Node({
       'entry.css': '.class {}',
-      'other.txt': 'hello'
+      'base': 'extensionless',
+      'other': {
+        'fileA.txt': 'hello',
+        'fileB.txt': 'goodbye'
+      }
     });
 
     var compiled = fixture.build(new CSSModules(input));
@@ -236,7 +240,11 @@ describe('broccoli-css-modules', function() {
       'entry.js': jsOutput({
         class: '_entry__class'
       }),
-      'other.txt': 'hello'
+      'base': 'extensionless',
+      'other': {
+        'fileA.txt': 'hello',
+        'fileB.txt': 'goodbye'
+      }
     });
   });
 
