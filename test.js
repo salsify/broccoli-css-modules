@@ -182,7 +182,7 @@ describe('broccoli-css-modules', function() {
     this.slow(150);
 
     var input = new Node({
-      'entry.scss': '.outer { .class { color: blue; } }'
+      'entry.css': '.outer { .class { color: blue; } }'
     });
 
     var compiled = fixture.build(new CSSModules(input, {
@@ -192,13 +192,51 @@ describe('broccoli-css-modules', function() {
     }));
 
     return assert.eventually.deepEqual(compiled, {
-      'entry.scss': cssOutput('entry.scss', [
+      'entry.css': cssOutput('entry.css', [
         '._entry__outer { ._entry__class { color: blue; } }'
       ]),
       'entry.js': jsOutput({
         outer: '_entry__outer',
         class: '_entry__class'
       })
+    });
+  });
+
+  it('accepts a custom extension', function() {
+    var input = new Node({
+      'entry.foo.bar': '.class { color: green; }'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      extension: 'foo.bar'
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.foo.bar': cssOutput('entry.foo.bar', [
+        '._entry_foo__class { color: green; }'
+      ]),
+      'entry.js': jsOutput({
+        class: '_entry_foo__class'
+      })
+    });
+  });
+
+  it('ignores irrelevant files', function() {
+    var input = new Node({
+      'entry.css': '.class {}',
+      'other.txt': 'hello'
+    });
+
+    var compiled = fixture.build(new CSSModules(input));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.css': cssOutput('entry.css', [
+        '._entry__class {}'
+      ]),
+      'entry.js': jsOutput({
+        class: '_entry__class'
+      }),
+      'other.txt': 'hello'
     });
   });
 

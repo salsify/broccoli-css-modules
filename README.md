@@ -20,6 +20,9 @@ All configuration parameters listed below are optional.
 ##### `encoding`
 The assumed character encoding for all files being processed. Defaults to `utf-8`.
 
+##### `extension`
+The extension that input files will have. Defaults to `css`.
+
 ##### `plugins`
 Additional [PostCSS](https://github.com/postcss/postcss) plugins that will be applied to the input styles. May be either
 an array or a hash with `before` and/or `after` keys, each containing an array of plugins.

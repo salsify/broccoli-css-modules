@@ -7,6 +7,7 @@ var Promise = require('rsvp').Promise;
 var Writer = require('broccoli-caching-writer');
 var mkdirp = require('mkdirp');
 var assign = require('object-assign');
+var symlinkOrCopy = require('symlink-or-copy');
 
 var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
@@ -28,7 +29,8 @@ function CSSModules(inputNode, _options) {
 
   this.plugins = unwrapPlugins(options.plugins || [], this);
   this.encoding = options.encoding || 'utf-8';
-  this.generateScopedName = options.generateScopedName || LoaderCore.scope.generateScopedName;
+  this.extension = options.extension || 'css';
+  this.generateScopedName = options.generateScopedName || scope.generateScopedName;
   this.resolvePath = options.resolvePath || resolvePath;
   this.onProcessFile = options.onProcessFile;
   this.formatJS = options.formatJS;
@@ -53,13 +55,19 @@ CSSModules.prototype.process = function(sourcePath) {
   var relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
   var destinationPath = path.join(this.outputPath, relativeSource);
 
+  // If the file isn't an extension we care about, just copy it over untouched
+  if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
+    symlinkOrCopy.sync(sourcePath, destinationPath);
+    return;
+  }
+
   if (this.onProcessFile) {
     this.onProcessFile(sourcePath);
   }
 
   return this.loadPath(sourcePath).then(function(result) {
     var dirname = path.dirname(destinationPath);
-    var filename = path.basename(destinationPath).replace(/\.[^.]+$/, '');
+    var filename = path.basename(destinationPath, '.' + this.extension);
     var css = this.formatInjectableSource(result.injectableSource, relativeSource);
     var js = this.formatExportTokens(result.exportTokens, relativeSource);
 
