@@ -35,6 +35,30 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+  it('accepts a set of seed modules', function() {
+    var input = new Node({
+      'foo.css': '@value --test-color from "seeds";\n.abc { color: --test-color; }'
+    });
+
+    var compiled = fixture.build(new CSSModules(input, {
+      virtualModules: {
+        seeds: {
+          '--test-color': 'orange'
+        }
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'foo.css': cssOutput('foo.css', [
+        '._foo__abc { color: orange; }'
+      ]),
+      'foo.js': jsOutput({
+        '--test-color': 'orange',
+        abc: '_foo__abc'
+      })
+    });
+  });
+
   it('triggers the onProcessFile callback when specified', function() {
     var input = new Node({
       'foo.css': '.abc {}'

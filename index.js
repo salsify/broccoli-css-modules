@@ -36,6 +36,7 @@ function CSSModules(inputNode, _options) {
   this.formatJS = options.formatJS;
   this.formatCSS = options.formatCSS;
   this.postcssOptions = options.postcssOptions || {};
+  this.virtualModules = options.virtualModules || Object.create(null);
 
   this._seen = null;
 }
@@ -97,8 +98,12 @@ CSSModules.prototype.formatInjectableSource = function(injectableSource, moduleP
 // Hook for css-module-loader-core to fetch the exported tokens for a given import
 CSSModules.prototype.fetchExports = function(importString, fromFile) {
   var relativePath = importString.replace(/^['"]|['"]$/g, '');
-  var absolutePath = this.resolvePath(relativePath, fromFile);
 
+  if (relativePath in this.virtualModules) {
+    return Promise.resolve(this.virtualModules[relativePath]);
+  }
+
+  var absolutePath = this.resolvePath(relativePath, fromFile);
   return this.loadPath(absolutePath).then(function(result) {
     return result.exportTokens;
   });

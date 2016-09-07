@@ -23,6 +23,23 @@ The assumed character encoding for all files being processed. Defaults to `utf-8
 ##### `extension`
 The extension that input files will have. Defaults to `css`.
 
+##### `virtualModules`
+A hash of pre-defined modules with exported values, useful for passing in configuration to your CSS modules. For example, given this configuration:
+
+```js
+virtualModules: {
+  'color-constants': {
+    'grass-green': '#4dbd33'
+  }
+}
+```
+
+The following import would retrieve the value `#fdbd33`:
+
+```css
+@value grass-green from 'color-constants';
+```
+
 ##### `plugins`
 Additional [PostCSS](https://github.com/postcss/postcss) plugins that will be applied to the input styles. May be either
 an array or a hash with `before` and/or `after` keys, each containing an array of plugins.
