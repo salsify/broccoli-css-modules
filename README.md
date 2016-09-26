@@ -1,4 +1,4 @@
-# broccoli-css-modules [![Build Status](https://travis-ci.org/salsify/broccoli-css-modules.svg?branch=master)](https://travis-ci.org/salsify/broccoli-css-modules)
+# broccoli-css-modules [![Build Status](https://travis-ci.org/salsify/broccoli-css-modules.svg?branch=master)](https://travis-ci.org/salsify/broccoli-css-modules) [![Window Build Status](https://ci.appveyor.com/api/projects/status/github/salsify/broccoli-css-modules?svg=true)](https://ci.appveyor.com/project/dfreeman97827/broccoli-css-modules)
 A Broccoli plugin for compiling [CSS Modules](https://github.com/css-modules/css-modules).
 
 ## Usage

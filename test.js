@@ -73,7 +73,7 @@ describe('broccoli-css-modules', function() {
     });
 
     return fixture.build(modules).then(function() {
-      assert.equal(calledWith, path.join(modules.inputPaths[0], 'foo.css'));
+      assert.equal(calledWith, modules.posixInputPath() + '/foo.css');
     });
   });
 
@@ -141,8 +141,8 @@ describe('broccoli-css-modules', function() {
     var compiled = fixture.build(new CSSModules(input, {
       resolvePath: function(relativePath, fromFile) {
         assert.equal(relativePath, 'library');
-        assert.equal(fromFile, this.inputPaths[0] + '/directoryA/entry.css');
-        return this.inputPaths[0] + '/lib/library/index.css';
+        assert.equal(fromFile, this.posixInputPath() + '/directoryA/entry.css');
+        return this.posixInputPath() + '/lib/library/index.css';
       }
     }));
 
@@ -171,14 +171,14 @@ describe('broccoli-css-modules', function() {
     var expectedDepValues = ['bar.css', 'foo.css', special];
     var compiled = fixture.build(new CSSModules(input, {
       resolvePath: function(relativePath, fromFile) {
-        special.prefix = this.inputPaths[0];
+        special.prefix = this.posixInputPath();
         return special;
       },
 
       generateScopedName: function(className, path, rule, dependency) {
         var expectedDep = expectedDepValues[generateCount++];
         if (typeof expectedDep === 'string') {
-          expectedDep = this.inputPaths[0] + '/' + expectedDep;
+          expectedDep = this.posixInputPath() + '/' + expectedDep;
         }
 
         assert.equal(dependency, expectedDep);

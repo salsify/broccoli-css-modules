@@ -8,6 +8,7 @@ var Writer = require('broccoli-caching-writer');
 var mkdirp = require('mkdirp');
 var assign = require('object-assign');
 var symlinkOrCopy = require('symlink-or-copy');
+var ensurePosixPath = require('ensure-posix-path');
 
 var postcss = require('postcss');
 var LoaderCore = require('css-modules-loader-core');
@@ -49,12 +50,14 @@ CSSModules.prototype.build = function() {
 
   // TODO this could cache much more than it currently does across rebuilds, but we'd need to be smart to invalidate
   // things correctly when dependencies change
-  return Promise.all(this.listFiles().map(this.process.bind(this)));
+  return Promise.all(this.listFiles().map(function(sourcePath) {
+    return this.process(ensurePosixPath(sourcePath));
+  }.bind(this)));
 };
 
 CSSModules.prototype.process = function(sourcePath) {
   var relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
-  var destinationPath = path.join(this.outputPath, relativeSource);
+  var destinationPath = this.outputPath + '/' + relativeSource;
 
   // If the file isn't an extension we care about, just copy it over untouched
   if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
@@ -79,6 +82,10 @@ CSSModules.prototype.process = function(sourcePath) {
   }.bind(this));
 };
 
+CSSModules.prototype.posixInputPath = function() {
+  return ensurePosixPath(this.inputPaths[0]);
+};
+
 CSSModules.prototype.formatExportTokens = function(exportTokens, modulePath) {
   if (this.formatJS) {
     return this.formatJS(exportTokens, modulePath);
@@ -97,13 +104,13 @@ CSSModules.prototype.formatInjectableSource = function(injectableSource, moduleP
 
 // Hook for css-module-loader-core to fetch the exported tokens for a given import
 CSSModules.prototype.fetchExports = function(importString, fromFile) {
-  var relativePath = importString.replace(/^['"]|['"]$/g, '');
+  var relativePath = ensurePosixPath(importString.replace(/^['"]|['"]$/g, ''));
 
   if (relativePath in this.virtualModules) {
     return Promise.resolve(this.virtualModules[relativePath]);
   }
 
-  var absolutePath = this.resolvePath(relativePath, fromFile);
+  var absolutePath = this.resolvePath(relativePath, ensurePosixPath(fromFile));
   return this.loadPath(absolutePath).then(function(result) {
     return result.exportTokens;
   });
@@ -123,13 +130,13 @@ CSSModules.prototype.loadPath = function(dependency) {
 };
 
 CSSModules.prototype.generateRelativeScopedName = function(dependency, className, absolutePath, fullRule) {
-  var relativePath = absolutePath.replace(this.inputPaths[0] + '/', '');
+  var relativePath = ensurePosixPath(absolutePath).replace(this.posixInputPath() + '/', '');
   return this.generateScopedName(className, relativePath, fullRule, dependency);
 };
 
 CSSModules.prototype.load = function(content, dependency, pathFetcher) {
   var parser = new ModulesParser(pathFetcher);
-  var options = this.processorOptions({ from: '/' + dependency });
+  var options = this.processorOptions({ from: dependency.toString() });
   var processor = postcss([]
       .concat(this.plugins.before)
       .concat(this.loaderPlugins(dependency))
@@ -157,7 +164,7 @@ CSSModules.prototype.loaderPlugins = function(dependency) {
 };
 
 function resolvePath(relativePath, fromFile) {
-  return path.resolve(path.dirname(fromFile), relativePath);
+  return ensurePosixPath(path.resolve(path.dirname(fromFile), relativePath));
 }
 
 function unwrapPlugins(plugins, owner) {

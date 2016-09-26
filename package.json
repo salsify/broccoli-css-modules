@@ -4,7 +4,8 @@
   "description": "A broccoli plugin for compiling CSS modules",
   "main": "index.js",
   "scripts": {
-    "test": "jshint *.js && mocha"
+    "test": "jshint *.js && mocha",
+    "test-win": "mocha"
   },
   "keywords": [
     "broccoli-plugin",
@@ -23,6 +24,7 @@
   "dependencies": {
     "broccoli-caching-writer": "^2.2.1",
     "css-modules-loader-core": "^1.0.0",
+    "ensure-posix-path": "^1.0.2",
     "mkdirp": "^0.5.1",
     "object-assign": "^4.1.0",
     "postcss": "^5.0.19",
