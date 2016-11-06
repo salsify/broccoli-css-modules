@@ -73,6 +73,12 @@ A function that will be invoked to determine the output format of class name map
  - `modulePath`: the relative path of the module to be formatted
 The function should return a string representing the content to be written out. By default, the given object will be emitted as the default export of an ES6 module.
 
+#### `enableSourceMaps`
+Whether inline source maps should be generated for the transformed module CSS.
+
+#### `sourceMapBaseDir`
+The base directory relative to which paths in source maps should be encoded. Defaults to the base of the input tree.
+
 ##### `postcssOptions`
 A hash of options that will be passed directly through to the PostCSS processor. This allows the use of e.g. custom syntax in the processed files.
 
