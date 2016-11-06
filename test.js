@@ -16,7 +16,7 @@ chai.use(require('chai-as-promised'));
 var assert = chai.assert;
 
 describe('broccoli-css-modules', function() {
-  it('processes simple input and produces ICSS and JS', function() {
+  it('processes simple input and produces modularized CSS and JS', function() {
     this.slow(250);
 
     var input = new Node({
@@ -74,6 +74,81 @@ describe('broccoli-css-modules', function() {
 
     return fixture.build(modules).then(function() {
       assert.equal(calledWith, modules.posixInputPath() + '/foo.css');
+    });
+  });
+
+  it('invokes onModuleResolutionFailure when specified', function() {
+    var input = new Node({
+      'foo.css': '.abc { composes: def from "nonexistent"; }'
+    });
+
+    var called = false;
+    var modules = new CSSModules(input, {
+      onModuleResolutionFailure: function(failure, path, relativeTo) {
+        called = true;
+        assert.ok(/ENOENT/.test(failure.message));
+        assert.equal(path, 'nonexistent');
+        assert.ok(/foo\.css$/.test(relativeTo));
+      }
+    });
+
+    return fixture.build(modules).then(function() {
+      assert.ok(called);
+    });
+  });
+
+  it('fails when a module cannot be found and no onModuleResolutionFailure is specified', function() {
+    var input = new Node({
+      'foo.css': '.abc { composes: def from "nonexistent"; }'
+    });
+
+    var modules = new CSSModules(input);
+
+    return assert.isRejected(fixture.build(modules), /ENOENT/);
+  });
+
+  it('invokes onImportResolutionFailure when specified', function() {
+    var input = new Node({
+      'foo.css': '.abc { composes: def from "bar.css"; }',
+      'bar.css': '.foo {}'
+    });
+
+    var called = false;
+    var modules = new CSSModules(input, {
+      onImportResolutionFailure: function(symbol, path, relativeTo) {
+        called = true;
+        assert.equal(symbol, 'def');
+        assert.equal(path, 'bar.css');
+        assert.ok(/foo\.css$/.test(relativeTo));
+      }
+    });
+
+    return fixture.build(modules).then(function() {
+      assert.ok(called);
+    });
+  });
+
+  it('silently ignores import resolution failures when no onImportResolutionFailure is specified', function() {
+    var input = new Node({
+      'foo.css': '.abc { composes: def from "bar.css"; }',
+      'bar.css': '.foo {}'
+    });
+
+    var modules = new CSSModules(input);
+
+    return assert.eventually.deepEqual(fixture.build(modules), {
+      'foo.css': cssOutput('foo.css', [
+        '._foo__abc { }'
+      ]),
+      'foo.js': jsOutput({
+        abc: '_foo__abc undefined'
+      }),
+      'bar.css': cssOutput('bar.css', [
+        '._bar__foo {}'
+      ]),
+      'bar.js': jsOutput({
+        foo: '_bar__foo'
+      })
     });
   });
 

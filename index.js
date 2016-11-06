@@ -11,8 +11,7 @@ var symlinkOrCopy = require('symlink-or-copy');
 var ensurePosixPath = require('ensure-posix-path');
 
 var postcss = require('postcss');
-var LoaderCore = require('css-modules-loader-core');
-var ModulesParser = require('css-modules-loader-core/lib/parser');
+var linkModules = require('./lib/link-modules');
 
 var values = require('postcss-modules-values');
 var localByDefault = require('postcss-modules-local-by-default');
@@ -38,6 +37,8 @@ function CSSModules(inputNode, _options) {
   this.formatCSS = options.formatCSS;
   this.postcssOptions = options.postcssOptions || {};
   this.virtualModules = options.virtualModules || Object.create(null);
+  this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
+  this.onImportResolutionFailure = options.onImportResolutionFailure;
 
   this._seen = null;
 }
@@ -103,8 +104,8 @@ CSSModules.prototype.formatInjectableSource = function(injectableSource, moduleP
 };
 
 // Hook for css-module-loader-core to fetch the exported tokens for a given import
-CSSModules.prototype.fetchExports = function(importString, fromFile) {
-  var relativePath = ensurePosixPath(importString.replace(/^['"]|['"]$/g, ''));
+CSSModules.prototype.fetchExports = function(importPath, fromFile) {
+  var relativePath = ensurePosixPath(importPath);
 
   if (relativePath in this.virtualModules) {
     return Promise.resolve(this.virtualModules[relativePath]);
@@ -123,10 +124,14 @@ CSSModules.prototype.loadPath = function(dependency) {
     return Promise.resolve(seen[absolutePath]);
   }
 
-  var content = fs.readFileSync(absolutePath, this.encoding);
-  return this.load(content, dependency, this.fetchExports.bind(this)).then(function(result) {
-    return (seen[absolutePath] = result);
-  });
+  try {
+    var content = fs.readFileSync(absolutePath, this.encoding);
+    return this.load(content, dependency).then(function(result) {
+      return (seen[absolutePath] = result);
+    });
+  } catch (error) {
+    return Promise.reject(error);
+  }
 };
 
 CSSModules.prototype.generateRelativeScopedName = function(dependency, className, absolutePath, fullRule) {
@@ -134,17 +139,15 @@ CSSModules.prototype.generateRelativeScopedName = function(dependency, className
   return this.generateScopedName(className, relativePath, fullRule, dependency);
 };
 
-CSSModules.prototype.load = function(content, dependency, pathFetcher) {
-  var parser = new ModulesParser(pathFetcher);
+CSSModules.prototype.load = function(content, dependency) {
   var options = this.processorOptions({ from: dependency.toString() });
   var processor = postcss([]
       .concat(this.plugins.before)
       .concat(this.loaderPlugins(dependency))
-      .concat([parser.plugin])
       .concat(this.plugins.after));
 
   return processor.process(content, options).then(function(result) {
-    return { injectableSource: result.css, exportTokens: parser.exportTokens };
+    return { injectableSource: result.css, exportTokens: result.exportTokens };
   });
 };
 
@@ -159,6 +162,11 @@ CSSModules.prototype.loaderPlugins = function(dependency) {
     extractImports,
     scope({
       generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
+    }),
+    linkModules({
+      fetchExports: this.fetchExports.bind(this),
+      onModuleResolutionFailure: this.onModuleResolutionFailure,
+      onImportResolutionFailure: this.onImportResolutionFailure
     })
   ];
 };

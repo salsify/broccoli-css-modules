@@ -75,3 +75,15 @@ The function should return a string representing the content to be written out. 
 
 ##### `postcssOptions`
 A hash of options that will be passed directly through to the PostCSS processor. This allows the use of e.g. custom syntax in the processed files.
+
+#### `onModuleResolutionFailure`
+A function that will be invoked when a referenced module cannot be found. Receives three arguments:
+ - `failure`: details of why the lookup failed, if applicable
+ - `modulePath`: the path specified to locate the module
+ - `relativeTo`: the absolute path of the importing module
+
+#### `onImportResolutionFailure`
+A function that will be invoked when an imported symbol is not exported by the target module. Receives three arguments:
+ - `symbol`: the unresolved identifier for which an import was attempted
+ - `modulePath`: the path specified to locate the containing module
+ - `fromFile`: the absolute path of the importing module
