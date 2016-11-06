@@ -441,6 +441,65 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+it('produces sourcemaps when enabled', function() {
+  var input = new Node({
+    'base.css': '.green {}'
+  });
+
+  var compiled = fixture.build(new CSSModules(input, { enableSourceMaps: true }));
+
+  return assert.eventually.deepEqual(compiled, {
+      'base.css': mappedCSSOutput(['._base__green {}'], {
+        version: 3,
+        sources: ['base.css'],
+        names: [],
+        mappings: 'AAAA,gBAAS',
+        file: 'base.css',
+        sourcesContent: ['.green {}']
+      }),
+      'base.js': jsOutput({
+        green: '_base__green'
+      })
+  });
+});
+
+it('honors the sourceMapBaseDir when configured', function() {
+  var input = new Node({
+    foo: {
+      bar: {
+        baz: {
+          'base.css': '.green {}'
+        }
+      }
+    }
+  });
+
+  var compiled = fixture.build(new CSSModules(input, {
+    enableSourceMaps: true,
+    sourceMapBaseDir: 'foo/bar'
+  }));
+
+  return assert.eventually.deepEqual(compiled, {
+    foo: {
+      bar: {
+        baz: {
+          'base.css': mappedCSSOutput(['._foo_bar_baz_base__green {}'], {
+            version: 3,
+            sources: ['baz/base.css'],
+            names: [],
+            mappings: 'AAAA,4BAAS',
+            file: 'baz/base.css',
+            sourcesContent: ['.green {}']
+          }),
+          'base.js': jsOutput({
+            green: '_foo_bar_baz_base__green'
+          })
+        }
+      }
+    }
+  });
+});
+
   // The tests below are essentially just verifying the loader functionality, but useful as a sanity check
 
   it('composes classes across modules', function() {
@@ -502,4 +561,13 @@ function cssOutput(file, lines) {
 
 function jsOutput(data) {
   return 'export default ' + JSON.stringify(data, null, 2) + ';';
+}
+
+function mappedCSSOutput(lines, sourcemap) {
+  return lines.join('\n') + '\n' + sourceMapComment(sourcemap);
+}
+
+function sourceMapComment(json) {
+  var content = new Buffer(JSON.stringify(json), 'utf-8').toString('base64');
+  return '/*# sourceMappingURL=data:application/json;base64,' + content + ' */';
 }

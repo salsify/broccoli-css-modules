@@ -35,6 +35,8 @@ function CSSModules(inputNode, _options) {
   this.onProcessFile = options.onProcessFile;
   this.formatJS = options.formatJS;
   this.formatCSS = options.formatCSS;
+  this.enableSourceMaps = options.enableSourceMaps;
+  this.sourceMapBaseDir = options.sourceMapBaseDir;
   this.postcssOptions = options.postcssOptions || {};
   this.virtualModules = options.virtualModules || Object.create(null);
   this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
@@ -98,6 +100,8 @@ CSSModules.prototype.formatExportTokens = function(exportTokens, modulePath) {
 CSSModules.prototype.formatInjectableSource = function(injectableSource, modulePath) {
   if (this.formatCSS) {
     return this.formatCSS(injectableSource, modulePath);
+  } else if (this.enableSourceMaps) {
+    return injectableSource;
   } else {
     return '/* styles for ' + modulePath + ' */\n' + injectableSource;
   }
@@ -140,7 +144,11 @@ CSSModules.prototype.generateRelativeScopedName = function(dependency, className
 };
 
 CSSModules.prototype.load = function(content, dependency) {
-  var options = this.processorOptions({ from: dependency.toString() });
+  var options = this.processorOptions({
+    from: dependency.toString(),
+    map: this.sourceMapOptions(dependency)
+  });
+
   var processor = postcss([]
       .concat(this.plugins.before)
       .concat(this.loaderPlugins(dependency))
@@ -153,6 +161,18 @@ CSSModules.prototype.load = function(content, dependency) {
 
 CSSModules.prototype.processorOptions = function(additional) {
   return assign({}, additional, this.postcssOptions);
+};
+
+CSSModules.prototype.sourceMapOptions = function(dependency) {
+  if (!this.enableSourceMaps) return;
+
+  var dir = this.sourceMapBaseDir ? ('/' + ensurePosixPath(this.sourceMapBaseDir)) : '';
+
+  return {
+    inline: true,
+    sourcesContent: true,
+    annotation: this.posixInputPath() + dir + '/output.map'
+  };
 };
 
 CSSModules.prototype.loaderPlugins = function(dependency) {
