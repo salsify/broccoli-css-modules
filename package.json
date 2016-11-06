@@ -4,7 +4,7 @@
   "description": "A broccoli plugin for compiling CSS modules",
   "main": "index.js",
   "scripts": {
-    "test": "jshint *.js && mocha",
+    "test": "jshint *.js lib/*.js && mocha",
     "test-win": "mocha"
   },
   "keywords": [
