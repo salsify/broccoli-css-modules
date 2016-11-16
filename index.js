@@ -35,6 +35,7 @@ function CSSModules(inputNode, _options) {
   this.onProcessFile = options.onProcessFile;
   this.formatJS = options.formatJS;
   this.formatCSS = options.formatCSS;
+  this.destDir = options.destDir
   this.enableSourceMaps = options.enableSourceMaps;
   this.sourceMapBaseDir = options.sourceMapBaseDir;
   this.postcssOptions = options.postcssOptions || {};
@@ -43,6 +44,7 @@ function CSSModules(inputNode, _options) {
   this.onImportResolutionFailure = options.onImportResolutionFailure;
 
   this._seen = null;
+  this._cache = {};
 }
 
 CSSModules.prototype = Object.create(Writer.prototype);
@@ -60,6 +62,7 @@ CSSModules.prototype.build = function() {
 
 CSSModules.prototype.process = function(sourcePath) {
   var relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
+  var cachePath = this.cachePath + '/' + relativeSource;
   var destinationPath = this.outputPath + '/' + relativeSource;
 
   // If the file isn't an extension we care about, just copy it over untouched
@@ -69,19 +72,33 @@ CSSModules.prototype.process = function(sourcePath) {
     return;
   }
 
+  if (this.destDir) {
+  	destinationPath = path.join(this.outputPath, this.destDir, relativeSource);
+  }
+
   if (this.onProcessFile) {
     this.onProcessFile(sourcePath);
   }
 
   return this.loadPath(sourcePath).then(function(result) {
     var dirname = path.dirname(destinationPath);
+    var cacheDirname = path.dirname(cachePath);
     var filename = path.basename(destinationPath, '.' + this.extension);
     var css = this.formatInjectableSource(result.injectableSource, relativeSource);
     var js = this.formatExportTokens(result.exportTokens, relativeSource);
 
+	var cacheJsFilename = path.join(cacheDirname, filename + '.js');
+	var jsFilename = path.join(dirname, filename + '.js')
+	var previous = this._cache[jsFilename]
+	this._cache[jsFilename] = result.exportTokens
+
     mkdirp.sync(dirname);
+    mkdirp.sync(cacheDirname);
     fs.writeFileSync(destinationPath, css, this.encoding);
-    fs.writeFileSync(path.join(dirname, filename + '.js'), js, this.encoding);
+	if (!fs.existsSync(cacheJsFilename) ||  JSON.stringify(previous) !== JSON.stringify(result.exportTokens))  {
+    	fs.writeFileSync(cacheJsFilename, js, this.encoding);
+	}
+	symlinkOrCopy.sync(cacheJsFilename,jsFilename)
   }.bind(this));
 };
 
