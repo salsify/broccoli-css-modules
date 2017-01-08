@@ -1,5 +1,6 @@
 tmp/
 test.js
+yarn.lock
 
 .travis.yml
 .gitignore
