@@ -124,18 +124,17 @@ CSSModules.prototype.fetchExports = function(importPath, fromFile) {
 CSSModules.prototype.loadPath = function(dependency) {
   var seen = this._seen;
   var absolutePath = dependency.toString();
-  if (seen[absolutePath]) {
-    return Promise.resolve(seen[absolutePath]);
+  var loadPromise = seen[absolutePath];
+
+  if (!loadPromise) {
+    loadPromise = new Promise(function(resolve) {
+      var content = fs.readFileSync(absolutePath, this.encoding);
+      resolve(this.load(content, dependency));
+    }.bind(this));
+    seen[absolutePath] = loadPromise;
   }
 
-  try {
-    var content = fs.readFileSync(absolutePath, this.encoding);
-    return this.load(content, dependency).then(function(result) {
-      return (seen[absolutePath] = result);
-    });
-  } catch (error) {
-    return Promise.reject(error);
-  }
+  return loadPromise;
 };
 
 CSSModules.prototype.generateRelativeScopedName = function(dependency, className, absolutePath, fullRule) {
