@@ -3,6 +3,7 @@
 
 require('chai-as-promised');
 
+const sinon = require('sinon');
 const chai = require('chai');
 const fixture = require('broccoli-fixture');
 const CSSModules = require('./index');
@@ -73,6 +74,65 @@ describe('broccoli-css-modules', function() {
     return fixture.build(modules).then(function() {
       assert.equal(calledWith, modules.posixInputPath() + '/foo.css');
     });
+  });
+
+  it('triggers successful build lifecycle hooks when specified', function() {
+    let input = new Node({
+      'foo.css': '.abc {}'
+    });
+
+    let onBuildStart = sinon.spy();
+    let onBuildEnd = sinon.spy();
+    let onBuildSuccess = sinon.spy();
+    let onBuildError = sinon.spy();
+
+    let onProcessFile = () => {
+      assert.equal(onBuildStart.callCount, 1);
+      assert.equal(onBuildEnd.callCount, 0);
+      assert.equal(onBuildSuccess.callCount, 0);
+      assert.equal(onBuildError.callCount, 0);
+    };
+
+    let modules = new CSSModules(input, { onBuildStart, onBuildEnd, onBuildSuccess, onBuildError, onProcessFile });
+
+    return fixture.build(modules)
+      .then(() => {
+        assert.equal(onBuildStart.callCount, 1);
+        assert.equal(onBuildEnd.callCount, 1);
+        assert.equal(onBuildSuccess.callCount, 1);
+        assert.equal(onBuildError.callCount, 0);
+      });
+  });
+
+  it('triggers failure build lifecycle hooks when specified', function() {
+    let input = new Node({
+      'foo.css': '.abc {'
+    });
+
+    let onBuildStart = sinon.spy();
+    let onBuildEnd = sinon.spy();
+    let onBuildSuccess = sinon.spy();
+    let onBuildError = sinon.spy();
+
+    let onProcessFile = () => {
+      assert.equal(onBuildStart.callCount, 1);
+      assert.equal(onBuildEnd.callCount, 0);
+      assert.equal(onBuildSuccess.callCount, 0);
+      assert.equal(onBuildError.callCount, 0);
+    };
+
+    let modules = new CSSModules(input, { onBuildStart, onBuildEnd, onBuildSuccess, onBuildError, onProcessFile });
+
+    return fixture.build(modules)
+      .then(
+        () => assert.fail('Build should have errored'),
+        () => {
+          assert.equal(onBuildStart.callCount, 1);
+          assert.equal(onBuildEnd.callCount, 1);
+          assert.equal(onBuildSuccess.callCount, 0);
+          assert.equal(onBuildError.callCount, 1);
+        }
+      );
   });
 
   it('invokes onModuleResolutionFailure when specified', function() {

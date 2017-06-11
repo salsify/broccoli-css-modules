@@ -38,17 +38,35 @@ module.exports = class CSSModules extends Writer {
     this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
     this.onImportResolutionFailure = options.onImportResolutionFailure;
 
+    this.onBuildStart = options.onBuildStart || (() => {});
+    this.onBuildEnd = options.onBuildEnd || (() => {});
+    this.onBuildSuccess = options.onBuildSuccess || (() => {});
+    this.onBuildError = options.onBuildError || (() => {});
+
     this._seen = null;
   }
 
   build() {
     this._seen = Object.create(null);
+    this.onBuildStart();
 
     // TODO this could cache much more than it currently does across rebuilds, but we'd need to be smart to invalidate
     // things correctly when dependencies change
-    return Promise.all(this.listFiles().map(function(sourcePath) {
+    let processPromises = this.listFiles().map((sourcePath) => {
       return this.process(ensurePosixPath(sourcePath));
-    }.bind(this)));
+    });
+
+    return Promise.all(processPromises)
+      .then((result) => {
+        this.onBuildSuccess();
+        this.onBuildEnd();
+        return result;
+      })
+      .catch((error) => {
+        this.onBuildError();
+        this.onBuildEnd();
+        throw error;
+      });
   }
 
   process(sourcePath) {

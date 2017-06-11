@@ -57,6 +57,18 @@ A callback to resolve a given import path from one file to another. Receives two
  - `fromFile`: the absolute path of the importing module
 The function should return an absolute path where the contents of the target imported module can be located.
 
+##### `onBuildStart`
+A callback that will be invoked whenever a build or rebuild begins. Receives no arguments.
+
+##### `onBuildEnd`
+A callback that will be invoked whenever a build or rebuild concludes, whether it was successful or not. Receives no arguments.
+
+##### `onBuildSuccess`
+A callback that will be invoked whenever a build or rebuild successfully completes. Receives no arguments.
+
+##### `onBuildError`
+A callback that will be invoked whenever a build or rebuild fails with an error. Receives no arguments.
+
 ##### `onProcessFile`
 A callback that will be invoked whenever a file is about to be processed. Receives one argument:
  - `path`: the path of the file about to be processed
