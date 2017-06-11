@@ -1,200 +1,195 @@
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
+const fs = require('fs');
+const path = require('path');
 
-var Promise = require('rsvp').Promise;
-var Writer = require('broccoli-caching-writer');
-var mkdirp = require('mkdirp');
-var assign = require('object-assign');
-var symlinkOrCopy = require('symlink-or-copy');
-var ensurePosixPath = require('ensure-posix-path');
+const Promise = require('rsvp').Promise;
+const Writer = require('broccoli-caching-writer');
+const mkdirp = require('mkdirp');
+const assign = require('object-assign');
+const symlinkOrCopy = require('symlink-or-copy');
+const ensurePosixPath = require('ensure-posix-path');
 
-var postcss = require('postcss');
-var linkModules = require('./lib/link-modules');
+const postcss = require('postcss');
+const linkModules = require('./lib/link-modules');
 
-var values = require('postcss-modules-values');
-var localByDefault = require('postcss-modules-local-by-default');
-var extractImports = require('postcss-modules-extract-imports');
-var scope = require('postcss-modules-scope');
+const values = require('postcss-modules-values');
+const localByDefault = require('postcss-modules-local-by-default');
+const extractImports = require('postcss-modules-extract-imports');
+const scope = require('postcss-modules-scope');
 
-module.exports = CSSModules;
+module.exports = class CSSModules extends Writer {
+  constructor(inputNode, _options) {
+    super([inputNode], _options);
 
-function CSSModules(inputNode, _options) {
-  if (!(this instanceof CSSModules)) { return new CSSModules(inputNode, _options); }
+    let options = _options || {};
 
-  Writer.call(this, [inputNode], options);
+    this.plugins = unwrapPlugins(options.plugins || []);
+    this.encoding = options.encoding || 'utf-8';
+    this.extension = options.extension || 'css';
+    this.generateScopedName = options.generateScopedName || scope.generateScopedName;
+    this.resolvePath = options.resolvePath || resolvePath;
+    this.onProcessFile = options.onProcessFile;
+    this.formatJS = options.formatJS;
+    this.formatCSS = options.formatCSS;
+    this.enableSourceMaps = options.enableSourceMaps;
+    this.sourceMapBaseDir = options.sourceMapBaseDir;
+    this.postcssOptions = options.postcssOptions || {};
+    this.virtualModules = options.virtualModules || Object.create(null);
+    this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
+    this.onImportResolutionFailure = options.onImportResolutionFailure;
 
-  var options = _options || {};
-
-  this.plugins = unwrapPlugins(options.plugins || [], this);
-  this.encoding = options.encoding || 'utf-8';
-  this.extension = options.extension || 'css';
-  this.generateScopedName = options.generateScopedName || scope.generateScopedName;
-  this.resolvePath = options.resolvePath || resolvePath;
-  this.onProcessFile = options.onProcessFile;
-  this.formatJS = options.formatJS;
-  this.formatCSS = options.formatCSS;
-  this.enableSourceMaps = options.enableSourceMaps;
-  this.sourceMapBaseDir = options.sourceMapBaseDir;
-  this.postcssOptions = options.postcssOptions || {};
-  this.virtualModules = options.virtualModules || Object.create(null);
-  this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
-  this.onImportResolutionFailure = options.onImportResolutionFailure;
-
-  this._seen = null;
-}
-
-CSSModules.prototype = Object.create(Writer.prototype);
-CSSModules.prototype.constructor = CSSModules;
-
-CSSModules.prototype.build = function() {
-  this._seen = Object.create(null);
-
-  // TODO this could cache much more than it currently does across rebuilds, but we'd need to be smart to invalidate
-  // things correctly when dependencies change
-  return Promise.all(this.listFiles().map(function(sourcePath) {
-    return this.process(ensurePosixPath(sourcePath));
-  }.bind(this)));
-};
-
-CSSModules.prototype.process = function(sourcePath) {
-  var relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
-  var destinationPath = this.outputPath + '/' + relativeSource;
-
-  // If the file isn't an extension we care about, just copy it over untouched
-  if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
-    mkdirp.sync(path.dirname(destinationPath));
-    symlinkOrCopy.sync(sourcePath, destinationPath);
-    return;
+    this._seen = null;
   }
 
-  if (this.onProcessFile) {
-    this.onProcessFile(sourcePath);
+  build() {
+    this._seen = Object.create(null);
+
+    // TODO this could cache much more than it currently does across rebuilds, but we'd need to be smart to invalidate
+    // things correctly when dependencies change
+    return Promise.all(this.listFiles().map(function(sourcePath) {
+      return this.process(ensurePosixPath(sourcePath));
+    }.bind(this)));
   }
 
-  return this.loadPath(sourcePath).then(function(result) {
-    var dirname = path.dirname(destinationPath);
-    var filename = path.basename(destinationPath, '.' + this.extension);
-    var css = this.formatInjectableSource(result.injectableSource, relativeSource);
-    var js = this.formatExportTokens(result.exportTokens, relativeSource);
+  process(sourcePath) {
+    let relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
+    let destinationPath = this.outputPath + '/' + relativeSource;
 
-    mkdirp.sync(dirname);
-    fs.writeFileSync(destinationPath, css, this.encoding);
-    fs.writeFileSync(path.join(dirname, filename + '.js'), js, this.encoding);
-  }.bind(this));
-};
+    // If the file isn't an extension we care about, just copy it over untouched
+    if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
+      mkdirp.sync(path.dirname(destinationPath));
+      symlinkOrCopy.sync(sourcePath, destinationPath);
+      return;
+    }
 
-CSSModules.prototype.posixInputPath = function() {
-  return ensurePosixPath(this.inputPaths[0]);
-};
+    if (this.onProcessFile) {
+      this.onProcessFile(sourcePath);
+    }
 
-CSSModules.prototype.formatExportTokens = function(exportTokens, modulePath) {
-  if (this.formatJS) {
-    return this.formatJS(exportTokens, modulePath);
-  } else {
-    return 'export default ' + JSON.stringify(exportTokens, null, 2) + ';';
-  }
-};
+    return this.loadPath(sourcePath).then(function(result) {
+      let dirname = path.dirname(destinationPath);
+      let filename = path.basename(destinationPath, '.' + this.extension);
+      let css = this.formatInjectableSource(result.injectableSource, relativeSource);
+      let js = this.formatExportTokens(result.exportTokens, relativeSource);
 
-CSSModules.prototype.formatInjectableSource = function(injectableSource, modulePath) {
-  if (this.formatCSS) {
-    return this.formatCSS(injectableSource, modulePath);
-  } else if (this.enableSourceMaps) {
-    return injectableSource;
-  } else {
-    return '/* styles for ' + modulePath + ' */\n' + injectableSource;
-  }
-};
-
-// Hook for css-module-loader-core to fetch the exported tokens for a given import
-CSSModules.prototype.fetchExports = function(importPath, fromFile) {
-  var relativePath = ensurePosixPath(importPath);
-
-  if (relativePath in this.virtualModules) {
-    return Promise.resolve(this.virtualModules[relativePath]);
-  }
-
-  var absolutePath = this.resolvePath(relativePath, ensurePosixPath(fromFile));
-  return this.loadPath(absolutePath).then(function(result) {
-    return result.exportTokens;
-  });
-};
-
-CSSModules.prototype.loadPath = function(dependency) {
-  var seen = this._seen;
-  var absolutePath = dependency.toString();
-  var loadPromise = seen[absolutePath];
-
-  if (!loadPromise) {
-    loadPromise = new Promise(function(resolve) {
-      var content = fs.readFileSync(absolutePath, this.encoding);
-      resolve(this.load(content, dependency));
+      mkdirp.sync(dirname);
+      fs.writeFileSync(destinationPath, css, this.encoding);
+      fs.writeFileSync(path.join(dirname, filename + '.js'), js, this.encoding);
     }.bind(this));
-    seen[absolutePath] = loadPromise;
   }
 
-  return loadPromise;
-};
+  posixInputPath() {
+    return ensurePosixPath(this.inputPaths[0]);
+  }
 
-CSSModules.prototype.generateRelativeScopedName = function(dependency, className, absolutePath, fullRule) {
-  var relativePath = ensurePosixPath(absolutePath).replace(this.posixInputPath() + '/', '');
-  return this.generateScopedName(className, relativePath, fullRule, dependency);
-};
+  formatExportTokens(exportTokens, modulePath) {
+    if (this.formatJS) {
+      return this.formatJS(exportTokens, modulePath);
+    } else {
+      return 'export default ' + JSON.stringify(exportTokens, null, 2) + ';';
+    }
+  }
 
-CSSModules.prototype.load = function(content, dependency) {
-  var options = this.processorOptions({
-    from: dependency.toString(),
-    map: this.sourceMapOptions(dependency)
-  });
+  formatInjectableSource(injectableSource, modulePath) {
+    if (this.formatCSS) {
+      return this.formatCSS(injectableSource, modulePath);
+    } else if (this.enableSourceMaps) {
+      return injectableSource;
+    } else {
+      return '/* styles for ' + modulePath + ' */\n' + injectableSource;
+    }
+  }
 
-  var processor = postcss([]
-      .concat(this.plugins.before)
-      .concat(this.loaderPlugins(dependency))
-      .concat(this.plugins.after));
+  // Hook for css-module-loader-core to fetch the exported tokens for a given import
+  fetchExports(importPath, fromFile) {
+    let relativePath = ensurePosixPath(importPath);
 
-  return processor.process(content, options).then(function(result) {
-    return { injectableSource: result.css, exportTokens: result.exportTokens };
-  });
-};
+    if (relativePath in this.virtualModules) {
+      return Promise.resolve(this.virtualModules[relativePath]);
+    }
 
-CSSModules.prototype.processorOptions = function(additional) {
-  return assign({}, additional, this.postcssOptions);
-};
+    let absolutePath = this.resolvePath(relativePath, ensurePosixPath(fromFile));
+    return this.loadPath(absolutePath).then(function(result) {
+      return result.exportTokens;
+    });
+  }
 
-CSSModules.prototype.sourceMapOptions = function(dependency) {
-  if (!this.enableSourceMaps) return;
+  loadPath(dependency) {
+    let seen = this._seen;
+    let absolutePath = dependency.toString();
+    let loadPromise = seen[absolutePath];
 
-  var dir = this.sourceMapBaseDir ? ('/' + ensurePosixPath(this.sourceMapBaseDir)) : '';
+    if (!loadPromise) {
+      loadPromise = new Promise(function(resolve) {
+        let content = fs.readFileSync(absolutePath, this.encoding);
+        resolve(this.load(content, dependency));
+      }.bind(this));
+      seen[absolutePath] = loadPromise;
+    }
 
-  return {
-    inline: true,
-    sourcesContent: true,
-    annotation: this.posixInputPath() + dir + '/output.map'
-  };
-};
+    return loadPromise;
+  }
 
-CSSModules.prototype.loaderPlugins = function(dependency) {
-  return [
-    values,
-    localByDefault,
-    extractImports,
-    scope({
-      generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
-    }),
-    linkModules({
-      fetchExports: this.fetchExports.bind(this),
-      onModuleResolutionFailure: this.onModuleResolutionFailure,
-      onImportResolutionFailure: this.onImportResolutionFailure
-    })
-  ];
+  generateRelativeScopedName(dependency, className, absolutePath, fullRule) {
+    let relativePath = ensurePosixPath(absolutePath).replace(this.posixInputPath() + '/', '');
+    return this.generateScopedName(className, relativePath, fullRule, dependency);
+  }
+
+  load(content, dependency) {
+    let options = this.processorOptions({
+      from: dependency.toString(),
+      map: this.sourceMapOptions()
+    });
+
+    let processor = postcss([]
+        .concat(this.plugins.before)
+        .concat(this.loaderPlugins(dependency))
+        .concat(this.plugins.after));
+
+    return processor.process(content, options).then(function(result) {
+      return { injectableSource: result.css, exportTokens: result.exportTokens };
+    });
+  }
+
+  processorOptions(additional) {
+    return assign({}, additional, this.postcssOptions);
+  }
+
+  sourceMapOptions() {
+    if (!this.enableSourceMaps) return;
+
+    let dir = this.sourceMapBaseDir ? ('/' + ensurePosixPath(this.sourceMapBaseDir)) : '';
+
+    return {
+      inline: true,
+      sourcesContent: true,
+      annotation: this.posixInputPath() + dir + '/output.map'
+    };
+  }
+
+  loaderPlugins(dependency) {
+    return [
+      values,
+      localByDefault,
+      extractImports,
+      scope({
+        generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
+      }),
+      linkModules({
+        fetchExports: this.fetchExports.bind(this),
+        onModuleResolutionFailure: this.onModuleResolutionFailure,
+        onImportResolutionFailure: this.onImportResolutionFailure
+      })
+    ];
+  }
 };
 
 function resolvePath(relativePath, fromFile) {
   return ensurePosixPath(path.resolve(path.dirname(fromFile), relativePath));
 }
 
-function unwrapPlugins(plugins, owner) {
+function unwrapPlugins(plugins) {
   if (Array.isArray(plugins)) {
     return {
       before: [],
@@ -206,12 +201,4 @@ function unwrapPlugins(plugins, owner) {
       after: plugins.after || []
     };
   }
-}
-
-function makeLoadCallback(owner) {
-  return function load(path) {
-    return owner.loadPath(path).then(function(result) {
-      return result.injectableSource;
-    });
-  };
 }

@@ -3,27 +3,25 @@
 
 require('chai-as-promised');
 
-var path = require('path');
-var chai = require('chai');
-var fixture = require('broccoli-fixture');
-var CSSModules = require('./index');
+const chai = require('chai');
+const fixture = require('broccoli-fixture');
+const CSSModules = require('./index');
 
-var Node = fixture.Node;
-var Builder = fixture.Builder;
+const Node = fixture.Node;
 
 chai.use(require('chai-as-promised'));
 
-var assert = chai.assert;
+const assert = chai.assert;
 
 describe('broccoli-css-modules', function() {
   it('processes simple input and produces modularized CSS and JS', function() {
     this.slow(250);
 
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc {}'
     });
 
-    var compiled = fixture.build(new CSSModules(input));
+    let compiled = fixture.build(new CSSModules(input));
 
     return assert.eventually.deepEqual(compiled, {
       'foo.css': cssOutput('foo.css', [
@@ -36,11 +34,11 @@ describe('broccoli-css-modules', function() {
   });
 
   it('accepts a set of seed modules', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '@value --test-color from "seeds";\n.abc { color: --test-color; }'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
+    let compiled = fixture.build(new CSSModules(input, {
       virtualModules: {
         seeds: {
           '--test-color': 'orange'
@@ -60,13 +58,13 @@ describe('broccoli-css-modules', function() {
   });
 
   it('triggers the onProcessFile callback when specified', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc {}'
     });
 
-    var calledWith = null;
-    var modules = new CSSModules(input, {
-      onProcessFile: function(file) {
+    let calledWith = null;
+    let modules = new CSSModules(input, {
+      onProcessFile(file) {
         assert.equal(calledWith, null);
         calledWith = file;
       }
@@ -78,13 +76,13 @@ describe('broccoli-css-modules', function() {
   });
 
   it('invokes onModuleResolutionFailure when specified', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc { composes: def from "nonexistent"; }'
     });
 
-    var called = false;
-    var modules = new CSSModules(input, {
-      onModuleResolutionFailure: function(failure, path, relativeTo) {
+    let called = false;
+    let modules = new CSSModules(input, {
+      onModuleResolutionFailure(failure, path, relativeTo) {
         called = true;
         assert.ok(/ENOENT/.test(failure.message));
         assert.equal(path, 'nonexistent');
@@ -98,24 +96,24 @@ describe('broccoli-css-modules', function() {
   });
 
   it('fails when a module cannot be found and no onModuleResolutionFailure is specified', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc { composes: def from "nonexistent"; }'
     });
 
-    var modules = new CSSModules(input);
+    let modules = new CSSModules(input);
 
     return assert.isRejected(fixture.build(modules), /ENOENT/);
   });
 
   it('invokes onImportResolutionFailure when specified', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc { composes: def from "bar.css"; }',
       'bar.css': '.foo {}'
     });
 
-    var called = false;
-    var modules = new CSSModules(input, {
-      onImportResolutionFailure: function(symbol, path, relativeTo) {
+    let called = false;
+    let modules = new CSSModules(input, {
+      onImportResolutionFailure(symbol, path, relativeTo) {
         called = true;
         assert.equal(symbol, 'def');
         assert.equal(path, 'bar.css');
@@ -129,12 +127,12 @@ describe('broccoli-css-modules', function() {
   });
 
   it('silently ignores import resolution failures when no onImportResolutionFailure is specified', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc { composes: def from "bar.css"; }',
       'bar.css': '.foo {}'
     });
 
-    var modules = new CSSModules(input);
+    let modules = new CSSModules(input);
 
     return assert.eventually.deepEqual(fixture.build(modules), {
       'foo.css': cssOutput('foo.css', [
@@ -153,18 +151,18 @@ describe('broccoli-css-modules', function() {
   });
 
   it('accepts custom output formatters for JS and CSS', function() {
-    var input = new Node({
+    let input = new Node({
       'foo.css': '.abc {}'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
-      formatJS: function(classMappings, modulePath) {
+    let compiled = fixture.build(new CSSModules(input, {
+      formatJS(classMappings, modulePath) {
         assert.equal(modulePath, 'foo.css');
         assert.deepEqual(classMappings, { abc: '_foo__abc' });
         return 'js content';
       },
 
-      formatCSS: function(namespacedCSS, modulePath) {
+      formatCSS(namespacedCSS, modulePath) {
         assert.equal(modulePath, 'foo.css');
         assert.equal(namespacedCSS, '._foo__abc {}');
         return 'css content';
@@ -178,14 +176,14 @@ describe('broccoli-css-modules', function() {
   });
 
   it('allows for customizing scoped name generation', function() {
-    var input = new Node({
+    let input = new Node({
       directory: {
         'file.css': '.class {}'
       }
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
-      generateScopedName: function(className, path, rule) {
+    let compiled = fixture.build(new CSSModules(input, {
+      generateScopedName(className, path, rule) {
         assert.equal(className, 'class');
         assert.equal(path, 'directory/file.css');
         assert.equal(rule, '.class {}');
@@ -202,7 +200,7 @@ describe('broccoli-css-modules', function() {
   });
 
   it('allows for customizing import resolution', function() {
-    var input = new Node({
+    let input = new Node({
       directoryA: {
         'entry.css': '@value test from "library";'
       },
@@ -213,8 +211,8 @@ describe('broccoli-css-modules', function() {
       }
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
-      resolvePath: function(relativePath, fromFile) {
+    let compiled = fixture.build(new CSSModules(input, {
+      resolvePath(relativePath, fromFile) {
         assert.equal(relativePath, 'library');
         assert.equal(fromFile, this.posixInputPath() + '/directoryA/entry.css');
         return this.posixInputPath() + '/lib/library/index.css';
@@ -236,22 +234,22 @@ describe('broccoli-css-modules', function() {
   });
 
   it('passes exact values returned from import resolution to scoped name generation', function() {
-    var special = { toString: function() { return this.prefix + '/bar.css'; } };
-    var input = new Node({
+    let special = { toString() { return this.prefix + '/bar.css'; } };
+    let input = new Node({
       'foo.css': '.foo { composes: bar from "bar"; }',
       'bar.css': '.bar { }'
     });
 
-    var generateCount = 0;
-    var expectedDepValues = ['bar.css', 'foo.css', special];
-    var compiled = fixture.build(new CSSModules(input, {
-      resolvePath: function(relativePath, fromFile) {
+    let generateCount = 0;
+    let expectedDepValues = ['bar.css', 'foo.css', special];
+    let compiled = fixture.build(new CSSModules(input, {
+      resolvePath() {
         special.prefix = this.posixInputPath();
         return special;
       },
 
-      generateScopedName: function(className, path, rule, dependency) {
-        var expectedDep = expectedDepValues[generateCount++];
+      generateScopedName(className, path, rule, dependency) {
+        let expectedDep = expectedDepValues[generateCount++];
         if (typeof expectedDep === 'string') {
           expectedDep = this.posixInputPath() + '/' + expectedDep;
         }
@@ -280,11 +278,11 @@ describe('broccoli-css-modules', function() {
   it('passes custom PostCSS options', function() {
     this.slow(150);
 
-    var input = new Node({
+    let input = new Node({
       'entry.css': '.outer { .class { color: blue; } }'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
+    let compiled = fixture.build(new CSSModules(input, {
       postcssOptions: {
         syntax: require('postcss-scss')
       }
@@ -302,11 +300,11 @@ describe('broccoli-css-modules', function() {
   });
 
   it('accepts a custom extension', function() {
-    var input = new Node({
+    let input = new Node({
       'entry.foo.bar': '.class { color: green; }'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
+    let compiled = fixture.build(new CSSModules(input, {
       extension: 'foo.bar'
     }));
 
@@ -321,7 +319,7 @@ describe('broccoli-css-modules', function() {
   });
 
   it('ignores irrelevant files', function() {
-    var input = new Node({
+    let input = new Node({
       'entry.css': '.class {}',
       'base': 'extensionless',
       'other': {
@@ -330,7 +328,7 @@ describe('broccoli-css-modules', function() {
       }
     });
 
-    var compiled = fixture.build(new CSSModules(input));
+    let compiled = fixture.build(new CSSModules(input));
 
     return assert.eventually.deepEqual(compiled, {
       'entry.css': cssOutput('entry.css', [
@@ -348,11 +346,11 @@ describe('broccoli-css-modules', function() {
   });
 
   it('applies an array of additional PostCSS plugins after the modules transform', function() {
-    var input = new Node({
+    let input = new Node({
       'entry.css': '.class { color: green; }'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
+    let compiled = fixture.build(new CSSModules(input, {
       plugins: [
         function(css) {
           css.walkRules(function(rule) {
@@ -380,12 +378,12 @@ describe('broccoli-css-modules', function() {
   });
 
   it('applies explicit before and after PostCSS plugin sets around the modules transform', function() {
-    var input = new Node({
+    let input = new Node({
       'constants.css': '@value superbold: 800;',
       'entry.css': '@value superbold from "constants.css";\n.class { color: green; font-weight: superbold; }'
     });
 
-    var compiled = fixture.build(new CSSModules(input, {
+    let compiled = fixture.build(new CSSModules(input, {
       plugins: {
         before: [
           function(css) {
@@ -442,11 +440,11 @@ describe('broccoli-css-modules', function() {
   });
 
 it('produces sourcemaps when enabled', function() {
-  var input = new Node({
+  let input = new Node({
     'base.css': '.green {}'
   });
 
-  var compiled = fixture.build(new CSSModules(input, { enableSourceMaps: true }));
+  let compiled = fixture.build(new CSSModules(input, { enableSourceMaps: true }));
 
   return assert.eventually.deepEqual(compiled, {
       'base.css': mappedCSSOutput(['._base__green {}'], {
@@ -464,7 +462,7 @@ it('produces sourcemaps when enabled', function() {
 });
 
 it('honors the sourceMapBaseDir when configured', function() {
-  var input = new Node({
+  let input = new Node({
     foo: {
       bar: {
         baz: {
@@ -474,7 +472,7 @@ it('honors the sourceMapBaseDir when configured', function() {
     }
   });
 
-  var compiled = fixture.build(new CSSModules(input, {
+  let compiled = fixture.build(new CSSModules(input, {
     enableSourceMaps: true,
     sourceMapBaseDir: 'foo/bar'
   }));
@@ -503,14 +501,14 @@ it('honors the sourceMapBaseDir when configured', function() {
   // The tests below are essentially just verifying the loader functionality, but useful as a sanity check
 
   it('composes classes across modules', function() {
-    var input = new Node({
+    let input = new Node({
       'base.css': '.green { color: green; }',
       components: {
         'my-component.css': '.comp { composes: green from "../base.css"; }'
       }
     });
 
-    var compiled = fixture.build(new CSSModules(input));
+    let compiled = fixture.build(new CSSModules(input));
 
     return assert.eventually.deepEqual(compiled, {
       'base.css': cssOutput('base.css', [
@@ -532,12 +530,12 @@ it('honors the sourceMapBaseDir when configured', function() {
   });
 
   it('exposes custom values in both JS and CSS', function() {
-    var input = new Node({
+    let input = new Node({
       'constants.css': '@value foo: "Helvetica Neue", Geneva, Arial, sans-serif;',
       'styles.css': '@value foo from "./constants.css";\n.class { font-family: foo; }'
     });
 
-    var compiled = fixture.build(new CSSModules(input));
+    let compiled = fixture.build(new CSSModules(input));
 
     return assert.eventually.deepEqual(compiled, {
       'constants.css': cssOutput('constants.css', []),
@@ -568,6 +566,6 @@ function mappedCSSOutput(lines, sourcemap) {
 }
 
 function sourceMapComment(json) {
-  var content = new Buffer(JSON.stringify(json), 'utf-8').toString('base64');
+  let content = new Buffer(JSON.stringify(json), 'utf-8').toString('base64');
   return '/*# sourceMappingURL=data:application/json;base64,' + content + ' */';
 }
