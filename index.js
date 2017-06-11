@@ -6,7 +6,6 @@ const path = require('path');
 const Promise = require('rsvp').Promise;
 const Writer = require('broccoli-caching-writer');
 const mkdirp = require('mkdirp');
-const assign = require('object-assign');
 const symlinkOrCopy = require('symlink-or-copy');
 const ensurePosixPath = require('ensure-posix-path');
 
@@ -153,7 +152,7 @@ module.exports = class CSSModules extends Writer {
   }
 
   processorOptions(additional) {
-    return assign({}, additional, this.postcssOptions);
+    return Object.assign({}, additional, this.postcssOptions);
   }
 
   sourceMapOptions() {
