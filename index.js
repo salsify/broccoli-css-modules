@@ -19,13 +19,16 @@ const scope = require('postcss-modules-scope');
 
 module.exports = class CSSModules extends Writer {
   constructor(inputNode, _options) {
-    super([inputNode], _options);
-
     let options = _options || {};
+    let extension = options.extension || 'css';
+
+    super([inputNode], Object.assign({
+      cacheInclude: [new RegExp(`\\.${extension}$`)]
+    }, options));
 
     this.plugins = unwrapPlugins(options.plugins || []);
     this.encoding = options.encoding || 'utf-8';
-    this.extension = options.extension || 'css';
+    this.extension = extension;
     this.generateScopedName = options.generateScopedName || scope.generateScopedName;
     this.resolvePath = options.resolvePath || resolvePath;
     this.onProcessFile = options.onProcessFile;

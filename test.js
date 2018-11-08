@@ -8,6 +8,9 @@ const chai = require('chai');
 const fixture = require('broccoli-fixture');
 const postcss = require('postcss');
 const CSSModules = require('./index');
+const { Builder } = require('broccoli');
+const os = require('os');
+const fs = require('fs-extra');
 
 const Node = fixture.Node;
 
@@ -379,7 +382,7 @@ describe('broccoli-css-modules', function() {
     });
   });
 
-  it('ignores irrelevant files', function() {
+  it('only emits relevant files', function() {
     let input = new Node({
       'entry.css': '.class {}',
       'base': 'extensionless',
@@ -398,11 +401,6 @@ describe('broccoli-css-modules', function() {
       'entry.js': jsOutput({
         class: '_entry__class'
       }),
-      'base': 'extensionless',
-      'other': {
-        'fileA.txt': 'hello',
-        'fileB.txt': 'goodbye'
-      }
     });
   });
 
@@ -562,7 +560,7 @@ it('produces sourcemaps when enabled', function() {
         version: 3,
         sources: ['base.css'],
         names: [],
-        mappings: 'AAAA,gBAAS',
+        mappings: 'AAAA,eAAQ',
         file: 'base.css',
         sourcesContent: ['.green {}']
       }),
@@ -596,7 +594,7 @@ it('honors the sourceMapBaseDir when configured', function() {
             version: 3,
             sources: ['baz/base.css'],
             names: [],
-            mappings: 'AAAA,4BAAS',
+            mappings: 'AAAA,2BAAQ',
             file: 'baz/base.css',
             sourcesContent: ['.green {}']
           }),
@@ -686,6 +684,41 @@ it('allows the JS output path to be customized', function() {
         class: '_styles__class'
       })
     });
+  });
+
+  it("doesn't rewrite files unnecessarily", function() {
+    const input = `${os.tmpdir()}/broccoli-css-modules-test/input`;
+    const inputFile = `${input}/random.txt`;
+
+    fs.removeSync(input);
+    fs.mkdirpSync(input);
+
+    fs.writeFileSync(`${input}/file.css`, '.foo {}');
+    fs.writeFileSync(inputFile, '');
+
+    const tree = new CSSModules(input);
+    const builder = new Builder(tree);
+
+    const outputCSS = `${builder.outputPath}/file.css`;
+    const outputJS = `${builder.outputPath}/file.js`;
+    const mtimes = {};
+
+    return builder.build()
+      .then(() => {
+        mtimes.css = fs.lstatSync(outputCSS).mtimeMs;
+        mtimes.js = fs.lstatSync(outputJS).mtimeMs;
+
+        fs.writeFileSync(inputFile, 'uh oh');
+
+        return builder.build();
+      })
+      .then(() => {
+        assert.equal(fs.lstatSync(outputCSS).mtimeMs, mtimes.css);
+        assert.equal(fs.lstatSync(outputJS).mtimeMs, mtimes.js);
+      })
+      .then(() => {
+        return builder.cleanup();
+      });
   });
 });
 
