@@ -156,6 +156,7 @@ module.exports = class CSSModules extends Writer {
   load(content, dependency) {
     let options = this.processorOptions({
       from: dependency.toString(),
+      relativeFrom: dependency.toString().substring(this.inputPaths[0].length + 1),
       map: this.sourceMapOptions()
     });
 
