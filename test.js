@@ -6,6 +6,7 @@ require('chai-as-promised');
 const sinon = require('sinon');
 const chai = require('chai');
 const fixture = require('broccoli-fixture');
+const postcss = require('postcss');
 const CSSModules = require('./index');
 
 const Node = fixture.Node;
@@ -494,6 +495,56 @@ describe('broccoli-css-modules', function() {
       ]),
       'entry.js': jsOutput({
         superbold: '800',
+        class: '_entry__class'
+      })
+    });
+  });
+
+  it('provides `relativeFrom` to PostCSS plugins', function() {
+    let input = new Node({
+      'dependency.css': '@value file-name: FILE_NAME;',
+      'entry.css': '@value file-name: FILE_NAME;\n@value file-name as dependency-file-name from "dependency.css";\n.class { file-name: file-name; dependency-file-name: dependency-file-name; }'
+    });
+
+    let compiled = fixture.build(new CSSModules(input, {
+      plugins: {
+        before: [
+          function(css, result) {
+            css.walkAtRules('value', function(rule) {
+              rule.params = rule.params.replace(/FILE_NAME/g, result.opts.relativeFrom);
+            });
+
+            return css;
+          }
+        ],
+        after: [
+          function(css, result) {
+            css.append(postcss.comment({
+              text: result.opts.relativeFrom,
+              raws: { before: '\n' }
+            }));
+
+            return css;
+          }
+        ]
+      }
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'dependency.css': cssOutput('dependency.css', [
+        '',
+        '/* dependency.css */'
+      ]),
+      'dependency.js': jsOutput({
+        'file-name': 'dependency.css'
+      }),
+      'entry.css': cssOutput('entry.css', [
+        '._entry__class { file-name: entry.css; dependency-file-name: dependency.css; }',
+        '/* entry.css */'
+      ]),
+      'entry.js': jsOutput({
+        'file-name': 'entry.css',
+        'dependency-file-name': 'dependency.css',
         class: '_entry__class'
       })
     });
