@@ -86,7 +86,7 @@ module.exports = class CSSModules extends Writer {
     }
 
     return this.loadPath(sourcePath).then(function(result) {
-      let jsDestinationPath = this.getJSFilePath(cssDestinationPath);
+      let jsDestinationPath = this.outputPath + '/' + this.getJSFilePath(relativeSource);
       let css = this.formatInjectableSource(result.injectableSource, relativeSource);
       let js = this.formatExportTokens(result.exportTokens, relativeSource);
 
