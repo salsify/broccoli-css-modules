@@ -609,6 +609,31 @@ it('honors the sourceMapBaseDir when configured', function() {
   });
 });
 
+it('allows the JS output path to be customized', function() {
+  let input = new Node({
+    dir: {
+      'file.css': '.green { color: green; }'
+    },
+  });
+
+  let compiled = fixture.build(new CSSModules(input, {
+    getJSFilePath(cssPath) {
+      return cssPath.replace(/\.css$/, '-module.css.js');
+    },
+  }));
+
+  return assert.eventually.deepEqual(compiled, {
+    dir: {
+      'file.css': cssOutput('dir/file.css', [
+        '._dir_file__green { color: green; }',
+      ]),
+      'file-module.css.js': jsOutput({
+        green: '_dir_file__green',
+      }),
+    },
+  });
+});
+
   // The tests below are essentially just verifying the loader functionality, but useful as a sanity check
 
   it('composes classes across modules', function() {

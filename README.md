@@ -51,6 +51,9 @@ A callback to generate the scoped version of an identifier. Receives two argumen
  - `path`: the location of the module containing the identifier
 The function should return a string that uniquely globally identifies this name originating from the given module.
 
+##### `getJSFilePath`
+Allows for the customizing the output path for the JS file resulting from processing a CSS module. Defaults to simply replacing the extension on the input file with `.js`.
+
 ##### `resolvePath`
 A callback to resolve a given import path from one file to another. Receives two arguments:
  - `importPath`: the path from which to import, as specified in the importing module

@@ -37,6 +37,7 @@ module.exports = class CSSModules extends Writer {
     this.virtualModules = options.virtualModules || Object.create(null);
     this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
     this.onImportResolutionFailure = options.onImportResolutionFailure;
+    this.getJSFilePath = options.getJSFilePath || this.getJSFilePath;
 
     this.onBuildStart = options.onBuildStart || (() => {});
     this.onBuildEnd = options.onBuildEnd || (() => {});
@@ -71,12 +72,12 @@ module.exports = class CSSModules extends Writer {
 
   process(sourcePath) {
     let relativeSource = sourcePath.substring(this.inputPaths[0].length + 1);
-    let destinationPath = this.outputPath + '/' + relativeSource;
+    let cssDestinationPath = this.outputPath + '/' + relativeSource;
 
     // If the file isn't an extension we care about, just copy it over untouched
     if (sourcePath.lastIndexOf('.' + this.extension) !== sourcePath.length - this.extension.length - 1) {
-      mkdirp.sync(path.dirname(destinationPath));
-      symlinkOrCopy.sync(sourcePath, destinationPath);
+      mkdirp.sync(path.dirname(cssDestinationPath));
+      symlinkOrCopy.sync(sourcePath, cssDestinationPath);
       return;
     }
 
@@ -85,15 +86,20 @@ module.exports = class CSSModules extends Writer {
     }
 
     return this.loadPath(sourcePath).then(function(result) {
-      let dirname = path.dirname(destinationPath);
-      let filename = path.basename(destinationPath, '.' + this.extension);
+      let jsDestinationPath = this.getJSFilePath(cssDestinationPath);
       let css = this.formatInjectableSource(result.injectableSource, relativeSource);
       let js = this.formatExportTokens(result.exportTokens, relativeSource);
 
-      mkdirp.sync(dirname);
-      fs.writeFileSync(destinationPath, css, this.encoding);
-      fs.writeFileSync(path.join(dirname, filename + '.js'), js, this.encoding);
+      mkdirp.sync(path.dirname(cssDestinationPath));
+      fs.writeFileSync(cssDestinationPath, css, this.encoding);
+
+      mkdirp.sync(path.dirname(jsDestinationPath));
+      fs.writeFileSync(jsDestinationPath, js, this.encoding);
     }.bind(this));
+  }
+
+  getJSFilePath(cssPath) {
+    return cssPath.replace(new RegExp(`\\.${this.extension}$`), '.js');
   }
 
   posixInputPath() {
