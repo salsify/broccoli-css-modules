@@ -42,7 +42,7 @@
     "broccoli-fixture": "^1.0.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "eslint": "^6.5.1",
+    "eslint": "^5.0.0",
     "fs-extra": "^7.0.1",
     "mocha": "^6.2.1",
     "postcss-scss": "^2.0.0",
