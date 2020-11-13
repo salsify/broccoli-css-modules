@@ -511,7 +511,7 @@ it('produces sourcemaps when enabled', function() {
         version: 3,
         sources: ['base.css'],
         names: [],
-        mappings: 'AAAA,gBAAS',
+        mappings: 'AAAA,eAAQ',
         file: 'base.css',
         sourcesContent: ['.green {}']
       }),
@@ -545,7 +545,7 @@ it('honors the sourceMapBaseDir when configured', function() {
             version: 3,
             sources: ['baz/base.css'],
             names: [],
-            mappings: 'AAAA,4BAAS',
+            mappings: 'AAAA,2BAAQ',
             file: 'baz/base.css',
             sourcesContent: ['.green {}']
           }),
@@ -626,6 +626,6 @@ function mappedCSSOutput(lines, sourcemap) {
 }
 
 function sourceMapComment(json) {
-  let content = new Buffer(JSON.stringify(json), 'utf-8').toString('base64');
+  let content = new Buffer.from(JSON.stringify(json), 'utf-8').toString('base64');
   return '/*# sourceMappingURL=data:application/json;base64,' + content + ' */';
 }
