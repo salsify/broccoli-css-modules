@@ -11,6 +11,7 @@ const CSSModules = require('./index');
 const { Builder } = require('broccoli');
 const os = require('os');
 const fs = require('fs-extra');
+const path = require('path');
 
 const Node = fixture.Node;
 
@@ -595,7 +596,7 @@ it('honors the sourceMapBaseDir when configured', function() {
             sources: ['baz/base.css'],
             names: [],
             mappings: 'AAAA,2BAAQ',
-            file: 'baz/base.css',
+            file: path.join('baz', 'base.css'),
             sourcesContent: ['.green {}']
           }),
           'base.js': jsOutput({
@@ -735,6 +736,6 @@ function mappedCSSOutput(lines, sourcemap) {
 }
 
 function sourceMapComment(json) {
-  let content = new Buffer(JSON.stringify(json), 'utf-8').toString('base64');
+  let content = new Buffer.from(JSON.stringify(json), 'utf-8').toString('base64');
   return '/*# sourceMappingURL=data:application/json;base64,' + content + ' */';
 }
