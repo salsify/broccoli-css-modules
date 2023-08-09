@@ -37,6 +37,7 @@ module.exports = class CSSModules extends Writer {
     this.enableSourceMaps = options.enableSourceMaps;
     this.sourceMapBaseDir = options.sourceMapBaseDir;
     this.postcssOptions = options.postcssOptions || {};
+    this.scopeBehaviour = options.scopeBehaviour || 'local';
     this.virtualModules = options.virtualModules || Object.create(null);
     this.onModuleResolutionFailure = options.onModuleResolutionFailure || function(failure) { throw failure; };
     this.onImportResolutionFailure = options.onImportResolutionFailure;
@@ -198,7 +199,7 @@ module.exports = class CSSModules extends Writer {
   loaderPlugins(dependency) {
     return [
       values,
-      localByDefault,
+      this.scopeBehaviour !== 'global' ? localByDefault : null,
       extractImports,
       scope({
         generateScopedName: this.generateRelativeScopedName.bind(this, dependency)
@@ -208,7 +209,7 @@ module.exports = class CSSModules extends Writer {
         onModuleResolutionFailure: this.onModuleResolutionFailure,
         onImportResolutionFailure: this.onImportResolutionFailure
       })
-    ];
+    ].filter(Boolean);
   }
 };
 

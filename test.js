@@ -364,6 +364,30 @@ describe('broccoli-css-modules', function() {
     });
   });
 
+  it('supports global scopeBehaviour', function() {
+    this.slow(150);
+
+    let input = new Node({
+      'entry.css': ':local(.outer) { .class { color: blue; } }; .outer2 { color: green }'
+    });
+
+    let compiled = fixture.build(new CSSModules(input, {
+      postcssOptions: {
+        syntax: require('postcss-scss')
+      },
+      scopeBehaviour: 'global'
+    }));
+
+    return assert.eventually.deepEqual(compiled, {
+      'entry.css': cssOutput('entry.css', [
+        '._entry__outer { .class { color: blue; } }; .outer2 { color: green }'
+      ]),
+      'entry.js': jsOutput({
+        outer: '_entry__outer',
+      })
+    });
+  });
+
   it('accepts a custom extension', function() {
     let input = new Node({
       'entry.foo.bar': '.class { color: green; }'
